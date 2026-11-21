@@ -15,10 +15,10 @@
     </header>
 
     <nav class="tab-bar">
-        <button class="tab-btn active" onclick="openTab('prayer')">🕌 নামাজ</button>
-        <button class="tab-btn" onclick="openTab('quran')">📖 আল-কুরআন</button>
-        <button class="tab-btn" onclick="openTab('ramadan')">🌙 রমজান ২০২৭</button>
-        <button class="tab-btn" onclick="openTab('dua')">🤲 দোয়া ও তাসবিহ</button>
+        <button class="tab-btn active" onclick="openTab('prayer', event)">🕌 নামাজ</button>
+        <button class="tab-btn" onclick="openTab('quran', event)">📖 আল-কুরআন</button>
+        <button class="tab-btn" onclick="openTab('ramadan', event)">🌙 রমজান ২০২৭</button>
+        <button class="tab-btn" onclick="openTab('dua', event)">🤲 দোয়া ও তাসবিহ</button>
     </nav>
 
     <main class="container">
@@ -41,6 +41,27 @@
                 </div>
                 <p id="hijri-date" class="subtitle">হিজরি তারিখ লোড হচ্ছে...</p>
                 <h2 id="current-date">আজকের তারিখ</h2>
+
+                <!-- ওয়াক্ত শেষ হওয়ার ৩০ মিনিট আগে অ্যালার্ম কন্ট্রোল -->
+                <div class="alarm-bar">
+                    <div class="alarm-info">
+                        <strong>🔔 ওয়াক্ত শেষের ৩০ মিনিট আগে অ্যালার্ম</strong>
+                        <span id="alarm-status-text">বর্তমানে বন্ধ আছে (চালু করতে বাটনে ক্লিক করুন)</span>
+                    </div>
+                    <div class="alarm-actions">
+                        <button id="alarm-toggle-btn" class="alarm-btn" onclick="togglePrayerAlarm()">চালু করুন</button>
+                        <button class="alarm-test-btn" onclick="playAlarmSound(true)" title="সাউন্ড টেস্ট করুন">🔊 টেস্ট</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- অ্যালার্ম বাজলে এই সতর্কবার্তাটি ভেসে উঠবে -->
+            <div id="alarm-alert-banner" class="alarm-banner" style="display: none;">
+                <div>
+                    <strong id="alarm-banner-title">⚠️ নামাজের ওয়াক্ত শেষ হতে ৩০ মিনিট বাকি!</strong>
+                    <p id="alarm-banner-desc">দ্রুত নামাজ আদায় করে নিন।</p>
+                </div>
+                <button class="btn-secondary" onclick="dismissAlarmBanner()">ঠিক আছে</button>
             </div>
 
             <div class="prayer-grid" id="prayer-times-container">
