@@ -37,7 +37,6 @@ body.dark-mode {
 
 body {
     background-color: var(--bg-color);
-    /* মক্কার সোনালি আভা + মদিনার সবুজ আভা + ইসলামিক জ্যামিতিক নকশা */
     background-image:
         radial-gradient(circle at 15% 12%, var(--bg-makkah-glow) 0%, transparent 45%),
         radial-gradient(circle at 85% 22%, var(--bg-madinah-glow) 0%, transparent 48%),
@@ -129,6 +128,33 @@ body {
 .tab-btn.active {
     color: #fbbf24;
     border-bottom: 3px solid #fbbf24;
+}
+
+/* মোবাইল স্ক্রিনে ৪টি ট্যাব ২×২ গ্রিডে স্পষ্টভাবে দেখানোর ব্যবস্থা */
+@media (max-width: 600px) {
+    .tab-bar {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        justify-content: stretch;
+        overflow-x: visible;
+    }
+
+    .tab-btn {
+        padding: 0.8rem 0.6rem;
+        font-size: 0.95rem;
+        text-align: center;
+        border-bottom: 1px solid var(--border);
+        border-right: 1px solid var(--border);
+    }
+
+    .tab-btn:nth-child(2n) {
+        border-right: none;
+    }
+
+    .tab-btn.active {
+        background-color: rgba(251, 191, 36, 0.08);
+        border-bottom: 3px solid #fbbf24;
+    }
 }
 
 .container {
