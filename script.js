@@ -13,13 +13,35 @@ function openTab(tabName) {
     event.currentTarget.classList.add('active');
 }
 
-// ১২-ঘণ্টার ফরম্যাটে সময় রূপান্তর
-function formatTime12Hour(time24) {
-    let [hours, minutes] = time24.split(':');
-    hours = parseInt(hours);
+// সময় থেকে নির্দিষ্ট মিনিট (ডিফল্ট ১ মিনিট) এগিয়ে/পিছিয়ে নেওয়া
+function adjustTimeMinutes(time24, offsetMinutes = -1) {
+    // API থেকে অনেক সময় "05:12 (+06)" এভাবে আসে, তাই শুধু HH:MM অংশটি নেওয়া
+    const cleanTime = time24.trim().split(' ')[0];
+    let [hours, minutes] = cleanTime.split(':').map(Number);
+
+    let totalMinutes = hours * 60 + minutes + offsetMinutes;
+
+    // রাত ১২টা (00:00) ক্রস করলে ঠিক রাখা (0 থেকে 1439 মিনিটের মধ্যে রাখা)
+    totalMinutes = ((totalMinutes % 1440) + 1440) % 1440;
+
+    const newHours = Math.floor(totalMinutes / 60);
+    const newMinutes = totalMinutes % 60;
+
+    const formattedHours = String(newHours).padStart(2, '0');
+    const formattedMinutes = String(newMinutes).padStart(2, '0');
+
+    return `${formattedHours}:${formattedMinutes}`;
+}
+
+// ১ মিনিট এগিয়ে ১২-ঘণ্টার ফরম্যাটে সময় রূপান্তর
+function formatTime12Hour(time24, offsetMinutes = -1) {
+    const adjusted24 = adjustTimeMinutes(time24, offsetMinutes);
+    let [hours, minutes] = adjusted24.split(':').map(Number);
+
     const ampm = hours >= 12 ? 'PM' : 'AM';
     hours = hours % 12 || 12;
-    return `${hours}:${minutes} ${ampm}`;
+
+    return `${hours}:${String(minutes).padStart(2, '0')} ${ampm}`;
 }
 
 // ১. নামাজের সময়সূচি লোড করা (Aladhan API)
