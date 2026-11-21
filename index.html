@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>নূর - ইসলামিক কম্প্যানিয়ন</title>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="logo">🌙 নূর (Noor)</div>
+        <button id="theme-toggle" class="icon-btn" title="ডার্ক/লাইট মোড">🌓</button>
+    </header>
+
+    <nav class="tab-bar">
+        <button class="tab-btn active" onclick="openTab('prayer')">🕌 নামাজ</button>
+        <button class="tab-btn" onclick="openTab('quran')">📖 আল-কুরআন</button>
+        <button class="tab-btn" onclick="openTab('ramadan')">🌙 রমজান ২০২৭</button>
+        <button class="tab-btn" onclick="openTab('dua')">🤲 দোয়া ও তাসবিহ</button>
+    </nav>
+
+    <main class="container">
+
+        <!-- ১. নামাজের সময়সূচি সেকশন -->
+        <section id="prayer" class="tab-content active">
+            <div class="card hero-card">
+                <div class="location-row">
+                    <label for="district-select">জেলা নির্বাচন করুন:</label>
+                    <select id="district-select" onchange="fetchPrayerTimes()">
+                        <option value="Dhaka">ঢাকা</option>
+                        <option value="Chittagong">চট্টগ্রাম</option>
+                        <option value="Sylhet">সিলেট</option>
+                        <option value="Rajshahi">রাজশাহী</option>
+                        <option value="Khulna">খুলনা</option>
+                        <option value="Barisal">বরিশাল</option>
+                        <option value="Rangpur">রংপুর</option>
+                        <option value="Mymensingh">ময়মনসিংহ</option>
+                    </select>
+                </div>
+                <p id="hijri-date" class="subtitle">হিজরি তারিখ লোড হচ্ছে...</p>
+                <h2 id="current-date">আজকের তারিখ</h2>
+            </div>
+
+            <div class="prayer-grid" id="prayer-times-container">
+                <div class="loading">সময়সূচি লোড হচ্ছে...</div>
+            </div>
+        </section>
+
+        <!-- ২. আল-কুরআন সেকশন -->
+        <section id="quran" class="tab-content">
+            <div class="card">
+                <h3>সূরা নির্বাচন করুন</h3>
+                <select id="surah-select" class="full-select" onchange="loadSurah()">
+                    <option value="">সূরার তালিকা লোড হচ্ছে...</option>
+                </select>
+                <div class="audio-box" id="audio-container" style="display: none;">
+                    <p>সম্পূর্ণ সূরার তিলাওয়াত শুনুন:</p>
+                    <audio id="surah-audio" controls></audio>
+                </div>
+            </div>
+            <div id="ayah-container" class="ayah-list"></div>
+        </section>
+
+        <!-- ৩. রমজান ২০২৭ সেকশন -->
+        <section id="ramadan" class="tab-content">
+            <div class="card hero-card">
+                <h2>রমজান ক্যালেন্ডার ২০২৭ (১৪৪৮ হিজরি)</h2>
+                <p class="subtitle">চাঁদ দেখার সাপেক্ষে সম্ভাব্য তারিখ: ফেব্রুয়ারি - মার্চ ২০২৭</p>
+                <div class="dua-box">
+                    <p><strong>রোজার নিয়ত:</strong> নাওয়াইতু আন আছুমা গাদাম মিন শাহরি রামাদ্বানাল মুবারাকি ফারদ্বাল্লাকা ইয়া আল্লাহু ফাতাক্বাব্বাল মিন্নি ইন্নাকা আনতাস সামিউল আলিম।</p>
+                    <p><strong>ইফতারের দোয়া:</strong> আল্লাহুম্মা লাকা ছুমতু ওয়া আলা রিযক্বিকা আফতারতু।</p>
+                </div>
+            </div>
+
+            <div class="card table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>রমজান</th>
+                            <th>তারিখ (২০২৭)</th>
+                            <th>সেহরির শেষ সময়</th>
+                            <th>ইফতারের সময়</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ramadan-table-body">
+                        <tr><td colspan="4">সময়সূচি লোড হচ্ছে...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ৪. দোয়া ও তাসবিহ সেকশন -->
+        <section id="dua" class="tab-content">
+            <div class="card tasbih-card">
+                <h3>ডিজিটাল তাসবিহ</h3>
+                <div class="tasbih-display" id="tasbih-count">0</div>
+                <div class="tasbih-controls">
+                    <button class="btn-primary" onclick="incrementTasbih()">গণনা করুন (+১)</button>
+                    <button class="btn-secondary" onclick="resetTasbih()">রিসেট</button>
+                </div>
+            </div>
+
+            <div id="dua-list-container" class="dua-list"></div>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>সবার কল্যাণে উন্মুক্ত | ইসলামিক কম্প্যানিয়ন ওয়েব অ্যাপ</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
