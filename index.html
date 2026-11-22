@@ -19,18 +19,32 @@
     <nav class="tab-bar">
         <button class="tab-btn active" onclick="openTab('prayer', event)">🕌 নামাজ</button>
         <button class="tab-btn" onclick="openTab('quran', event)">📖 আল-কুরআন</button>
+        <button class="tab-btn" onclick="openTab('qibla', event)">🧭 কিবলা</button>
         <button class="tab-btn" onclick="openTab('ramadan', event)">🌙 রমজান ২০২৭</button>
         <button class="tab-btn" onclick="openTab('dua', event)">🤲 দোয়া ও তাসবিহ</button>
+        <button class="tab-btn" onclick="openTab('reflection', event)">🪞 দিনশেষ হিসাব</button>
     </nav>
 
     <main class="container">
+
+        <!-- দিনশেষ অটোমেটিক প্রশ্ন / রিমাইন্ডার ব্যানার -->
+        <div id="evening-prompt-banner" class="evening-prompt-card" style="display: none;">
+            <div>
+                <strong>🌙 সারাদিন কেমন কাটল?</strong>
+                <p>আজকের দিনটি নিয়ে ছোট্ট করে আত্মসমালোচনা ও আগামী দিনের দিকনির্দেশনা দেখে নিন।</p>
+            </div>
+            <div class="evening-prompt-actions">
+                <button class="btn-primary" onclick="jumpToReflectionTab()">এখনই লিখি</button>
+                <button class="btn-secondary" onclick="dismissEveningPrompt()">পরে</button>
+            </div>
+        </div>
 
         <!-- ১. নামাজের সময়সূচি সেকশন -->
         <section id="prayer" class="tab-content active">
             <div class="card hero-card">
                 <div class="location-row">
                     <label for="district-select">জেলা নির্বাচন করুন:</label>
-                    <select id="district-select" onchange="fetchPrayerTimes()">
+                    <select id="district-select" onchange="onDistrictChange()">
                         <option value="Dhaka">ঢাকা</option>
                         <option value="Chittagong">চট্টগ্রাম</option>
                         <option value="Sylhet">সিলেট</option>
@@ -86,35 +100,82 @@
             <div id="ayah-container" class="ayah-list"></div>
         </section>
 
-        <!-- ৩. রমজান ২০২৭ সেকশন -->
-        <section id="ramadan" class="tab-content">
-            <div class="card hero-card">
-                <h2>রমজান ক্যালেন্ডার ২০২৭ (১৪৪৮ হিজরি)</h2>
-                <p class="subtitle">চাঁদ দেখার সাপেক্ষে সম্ভাব্য তারিখ: ফেব্রুয়ারি - মার্চ ২০২৭</p>
-                <div class="dua-box">
-                    <p><strong>রোজার নিয়ত:</strong> নাওয়াইতু আন আছুমা গাদাম মিন শাহরি রামাদ্বানাল মুবারাকি ফারদ্বাল্লাকা ইয়া আল্লাহু ফাতাক্বাব্বাল মিন্নি ইন্নাকা আনতাস সামিউল আলিম।</p>
-                    <p><strong>ইফতারের দোয়া:</strong> আল্লাহুম্মা লাকা ছুমতু ওয়া আলা রিযক্বিকা আফতারতু।</p>
+        <!-- ৩. কিবলা কম্পাস সেকশন -->
+        <section id="qibla" class="tab-content">
+            <div class="card hero-card qibla-header-card">
+                <h2>🧭 কিবলা দিক নির্ণয় (Qibla Compass)</h2>
+                <p id="qibla-location-label" class="subtitle">নির্বাচিত জেলা: ঢাকা</p>
+                <div class="qibla-deg-box">
+                    <span id="qibla-degree-text">কিবলা কোণ: হিসাব হচ্ছে...</span>
+                    <small id="qibla-compass-hint">ফোনটি সমতলভাবে ধরে ঘোরান অথবা সেন্সর সক্রিয় করুন</small>
                 </div>
             </div>
 
-            <div class="card table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>রমজান</th>
-                            <th>তারিখ (২০২৭)</th>
-                            <th>সেহরির শেষ সময়</th>
-                            <th>ইফতারের সময়</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ramadan-table-body">
-                        <tr><td colspan="4">সময়সূচি লোড হচ্ছে...</td></tr>
-                    </tbody>
-                </table>
+            <div class="card compass-card">
+                <div class="compass-ring" id="compass-ring">
+                    <span class="cardinal n">উ</span>
+                    <span class="cardinal e">পূ</span>
+                    <span class="cardinal s">দ</span>
+                    <span class="cardinal w">প</span>
+
+                    <div class="qibla-pointer" id="qibla-pointer">
+                        <div class="kaaba-badge" title="কাবা শরীফের দিক">🕋</div>
+                        <div class="pointer-arrow"></div>
+                    </div>
+
+                    <div class="compass-center-dot"></div>
+                </div>
+
+                <div class="qibla-controls">
+                    <button class="btn-primary" id="enable-compass-btn" onclick="requestCompassPermission()">
+                        লাইভ কম্পাস চালু করুন
+                    </button>
+                </div>
+
+                <p id="compass-status" class="compass-status-text">
+                    সেন্সর সক্রিয় করলে ফোন ঘোরালে কিবলার দিক স্বয়ংক্রিয়ভাবে দেখাবে।
+                </p>
+
+                <div class="dua-box qibla-tips">
+                    <p><strong>সঠিক দিক বোঝার নিয়ম:</strong> ফোনটি হাতের তালুতে সমতল রেখে চুম্বক বা ধাতব কভার থেকে দূরে রাখুন। যেদিকে 🕋 আইকন ও সোনালি তীর নির্দেশ করে, সেদিকেই কিবলা।</p>
+                </div>
             </div>
         </section>
 
-        <!-- ৪. দোয়া ও তাসবিহ সেকশন -->
+        <!-- ৪. রমজান ২০২৭ ক্যালেন্ডার সেকশন -->
+        <section id="ramadan" class="tab-content">
+            <div class="card hero-card">
+                <h2>🌙 রমজান ক্যালেন্ডার ২০২৭ (সম্ভাব্য)</h2>
+                <p id="ramadan-district-label" class="subtitle">নির্বাচিত জেলা: ঢাকা • চাঁদ দেখার সাপেক্ষে ১–২ দিন পরিবর্তন হতে পারে</p>
+            </div>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>রমজান</th>
+                                <th>তারিখ (২০২৭)</th>
+                                <th>সেহরির শেষ সময়</th>
+                                <th>ইফতারের সময়</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ramadan-table-body">
+                            <tr>
+                                <td colspan="4">রমজান ২০২৭ সময়সূচি লোড হচ্ছে...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="dua-box">
+                    <p><strong>রোজার নিয়ত:</strong> نَوَيْتُ أَنْ أَصُومَ غَدًا مِّنْ شَهْرِ رَمَضَانَ الْمُبَارَكِ فَرْضًا لَّكَ يَا اللَّهُ فَتَقَبَّلْ مِنِّي إِنَّكَ أَنْتَ السَّمِيعُ الْعَلِيمُ।</p>
+                    <p style="margin-top: 0.5rem;"><strong>ইফতারের দোয়া:</strong> اللَّهُمَّ لَكَ صُمْتُ وَعَلَى رِزْقِكَ أَفْطَرْتُ।</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ৫. দোয়া ও তাসবিহ সেকশন -->
         <section id="dua" class="tab-content">
             <div class="card tasbih-card">
                 <h3>ডিজিটাল তাসবিহ</h3>
@@ -126,6 +187,73 @@
             </div>
 
             <div id="dua-list-container" class="dua-list"></div>
+        </section>
+
+        <!-- ৬. দিনশেষ আত্মসমালোচনা (মুহাসাবা ও দিকনির্দেশনা) সেকশন -->
+        <section id="reflection" class="tab-content">
+            <div class="card hero-card">
+                <h2>🪞 সারাদিনের হিসাব ও আত্মসমালোচনা</h2>
+                <p class="subtitle" id="reflection-auto-prompt">
+                    আজকের দিনটি কেমন গেল? ছোট্ট করে লিখুন—কী ভালো করেছেন, কোথায় ভুল বা ঘাটতি হয়েছে?
+                </p>
+            </div>
+
+            <div class="card">
+                <label for="daily-summary-input" class="reflection-label">
+                    সংক্ষেপে সারাদিনের কথা লিখুন (যেমন: নামাজ, কুরআন, কাজ, রাগ বা সময় নষ্ট হওয়ার কথা):
+                </label>
+                <textarea
+                    id="daily-summary-input"
+                    class="reflection-textarea"
+                    rows="4"
+                    placeholder="উদাহরণ: আজ ৪ ওয়াক্ত নামাজ পড়েছি, একটু কুরআন পড়েছি, কিন্তু দুপুরের পর অনেকটা সময় অযথা ফোনে নষ্ট হয়েছে আর মায়ের সাথে একটু বিরক্ত হয়ে কথা বলেছি..."
+                ></textarea>
+
+                <div class="reflection-check-row">
+                    <label class="chip-check"><input type="checkbox" id="chk-salah"> সময়মতো নামাজ</label>
+                    <label class="chip-check"><input type="checkbox" id="chk-quran"> কুরআন/জিকির</label>
+                    <label class="chip-check"><input type="checkbox" id="chk-good-deed"> ভালো আচরণ/সৎকাজ</label>
+                    <label class="chip-check"><input type="checkbox" id="chk-time-waste"> সময় নষ্ট হয়েছে</label>
+                    <label class="chip-check"><input type="checkbox" id="chk-anger"> রাগ/অসতর্কতা হয়েছে</label>
+                </div>
+
+                <div class="reflection-actions">
+                    <button class="btn-primary" onclick="generateDailyReflection()">বিশ্লেষণ ও দিকনির্দেশনা তৈরি করুন</button>
+                    <button class="btn-secondary" onclick="clearReflectionForm()">মুছে ফেলুন</button>
+                </div>
+            </div>
+
+            <!-- বিশ্লেষণ রিপোর্ট কার্ড -->
+            <div id="reflection-report-box" style="display: none;">
+                <div class="card analysis-card good-box">
+                    <h3>✅ আজকের ভালো দিকগুলো</h3>
+                    <ul id="report-good-list" class="report-list"></ul>
+                </div>
+
+                <div class="card analysis-card bad-box">
+                    <h3>⚠️ আজকের ভুল ও দুর্বল দিকগুলো</h3>
+                    <ul id="report-bad-list" class="report-list"></ul>
+                </div>
+
+                <div class="card analysis-card repentance-box">
+                    <h3>🤲 অনুশোচনা ও তওবার কথা</h3>
+                    <p id="report-repentance-text"></p>
+                    <p class="arabic-text reflection-dua-ar">أَسْتَغْفِرُ اللَّهَ الْعَظِيمَ الَّذِي لَا إِلَهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ وَأَتُوبُ إِلَيْهِ</p>
+                </div>
+
+                <div class="card analysis-card guidance-box">
+                    <h3>🧭 আগামী দিনের দিকনির্দেশনা</h3>
+                    <ul id="report-guidance-list" class="report-list"></ul>
+                </div>
+            </div>
+
+            <!-- আগের সংরক্ষিত দিনগুলোর আত্মসমালোচনার তালিকা -->
+            <div class="card">
+                <h3>🗂️ আগের দিনের আত্মসমালোচনার রেকর্ড</h3>
+                <div id="reflection-history-list" class="history-list">
+                    <p class="muted-note">এখনো কোনো দিনের হিসাব সংরক্ষিত নেই।</p>
+                </div>
+            </div>
         </section>
 
     </main>

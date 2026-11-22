@@ -1,360 +1,873 @@
-// ডার্ক মোড টগল
-const themeToggle = document.getElementById('theme-toggle');
-themeToggle.addEventListener('click', () => {
-    document.body.classList.toggle('dark-mode');
-});
+// ট্যাব পরিবর্তনের ফাংশন
+function openTab(tabId, event) {
+    const contents = document.querySelectorAll('.tab-content');
+    const buttons = document.querySelectorAll('.tab-btn');
 
-// ট্যাব পরিবর্তন করার ফাংশন
-function openTab(tabName, event) {
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    contents.forEach((content) => content.classList.remove('active'));
+    buttons.forEach((btn) => btn.classList.remove('active'));
 
-    document.getElementById(tabName).classList.add('active');
+    const targetTab = document.getElementById(tabId);
+    if (targetTab) {
+        targetTab.classList.add('active');
+    }
     if (event && event.currentTarget) {
         event.currentTarget.classList.add('active');
-    }
-}
-
-// সময় থেকে নির্দিষ্ট মিনিট (ডিফল্ট +১ মিনিট, অর্থাৎ ১ মিনিট পিছিয়ে) সমন্বয় করা
-function adjustTimeMinutes(time24, offsetMinutes = 1) {
-    const cleanTime = time24.trim().split(' ')[0];
-    let [hours, minutes] = cleanTime.split(':').map(Number);
-
-    let totalMinutes = hours * 60 + minutes + offsetMinutes;
-    totalMinutes = ((totalMinutes % 1440) + 1440) % 1440;
-
-    const newHours = Math.floor(totalMinutes / 60);
-    const newMinutes = totalMinutes % 60;
-
-    return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`;
-}
-
-// ১২-ঘণ্টার ফরম্যাটে সময় রূপান্তর
-function formatTime12Hour(time24, offsetMinutes = 1) {
-    const adjusted24 = adjustTimeMinutes(time24, offsetMinutes);
-    let [hours, minutes] = adjusted24.split(':').map(Number);
-
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12;
-
-    return `${hours}:${String(minutes).padStart(2, '0')} ${ampm}`;
-}
-
-// --- ওয়াক্ত শেষ হওয়ার ৩০ মিনিট আগে অ্যালার্ম সিস্টেম ---
-let isAlarmEnabled = localStorage.getItem('prayerAlarmEnabled') === 'true';
-let scheduledAlarms = [];
-let triggeredAlarmsToday = new Set();
-let lastLoadedDateStr = new Date().toDateString();
-let audioCtx = null;
-
-function initAudioContext() {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
-}
-
-// মিষ্টি অ্যালার্ম টোন বাজানোর ফাংশন (কোনো আলাদা MP3 ছাড়াই কাজ করবে)
-function playAlarmSound(isTest = false) {
-    initAudioContext();
-    const notes = [523.25, 659.25, 783.99, 1046.50];
-    notes.forEach((freq, i) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.25);
-
-        gain.gain.setValueAtTime(0.001, audioCtx.currentTime + i * 0.25);
-        gain.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + i * 0.25 + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.25 + 0.6);
-
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        osc.start(audioCtx.currentTime + i * 0.25);
-        osc.stop(audioCtx.currentTime + i * 0.25 + 0.65);
-    });
-
-    if (isTest) {
-        showAlarmBanner(
-            "🔔 অ্যালার্ম টেস্ট সফল হয়েছে!",
-            "প্রতি ওয়াক্ত শেষ হওয়ার ৩০ মিনিট আগে ঠিক এভাবেই অ্যালার্ম বাজবে।"
-        );
-    }
-}
-
-function updateAlarmUI() {
-    const btn = document.getElementById('alarm-toggle-btn');
-    const statusText = document.getElementById('alarm-status-text');
-    if (isAlarmEnabled) {
-        btn.innerText = 'চালু আছে ✓';
-        btn.classList.add('active');
-        statusText.innerText = 'সক্রিয়: প্রতি ওয়াক্ত শেষের ৩০ মিনিট আগে অ্যালার্ম বাজবে';
     } else {
-        btn.innerText = 'চালু করুন';
-        btn.classList.remove('active');
-        statusText.innerText = 'বর্তমানে বন্ধ আছে (চালু করতে বাটনে ক্লিক করুন)';
+        buttons.forEach((btn) => {
+            const attr = btn.getAttribute('onclick') || '';
+            if (attr.includes(`'${tabId}'`)) {
+                btn.classList.add('active');
+            }
+        });
     }
 }
 
-function togglePrayerAlarm() {
-    isAlarmEnabled = !isAlarmEnabled;
-    localStorage.setItem('prayerAlarmEnabled', isAlarmEnabled);
-    if (isAlarmEnabled) {
-        initAudioContext();
-        if ("Notification" in window && Notification.permission === "default") {
-            Notification.requestPermission();
+// ডার্ক/লাইট মোড টগল
+const themeToggle = document.getElementById('theme-toggle');
+if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+    });
+}
+
+// বাংলাদেশের প্রধান বিভাগ/জেলার স্থানাঙ্ক ও রমজান ২০২৭ সেহরি/ইফতার অফসেট (মিনিটে)
+const DISTRICT_COORDS = {
+    Dhaka: { bn: 'ঢাকা', lat: 23.8103, lon: 90.4125, offsetMin: 0 },
+    Chittagong: { bn: 'চট্টগ্রাম', lat: 22.3569, lon: 91.7832, offsetMin: -5 },
+    Sylhet: { bn: 'সিলেট', lat: 24.8949, lon: 91.8687, offsetMin: -6 },
+    Rajshahi: { bn: 'রাজশাহী', lat: 24.3745, lon: 88.6042, offsetMin: 7 },
+    Khulna: { bn: 'খুলনা', lat: 22.8456, lon: 89.5403, offsetMin: 3 },
+    Barisal: { bn: 'বরিশাল', lat: 22.7010, lon: 90.3535, offsetMin: 0 },
+    Rangpur: { bn: 'রংপুর', lat: 25.7439, lon: 89.2752, offsetMin: 4 },
+    Mymensingh: { bn: 'ময়মনসিংহ', lat: 24.7471, lon: 90.4203, offsetMin: 0 }
+};
+
+// কাবা শরীফ (মক্কা)-এর স্থানাঙ্ক
+const KAABA_LAT = 21.4225;
+const KAABA_LON = 39.8262;
+
+let currentQiblaBearing = 278;
+let compassListenerActive = false;
+let prayerAlarmEnabled = false;
+let triggeredAlarmKeys = new Set();
+let alarmScheduleItems = [];
+
+function toRadians(deg) {
+    return (deg * Math.PI) / 180;
+}
+
+function toDegrees(rad) {
+    return (rad * 180) / Math.PI;
+}
+
+// কোনো স্থানাঙ্ক থেকে কাবার দিক হিসাব
+function calculateQiblaBearing(lat, lon) {
+    const phi1 = toRadians(lat);
+    const phi2 = toRadians(KAABA_LAT);
+    const deltaLambda = toRadians(KAABA_LON - lon);
+
+    const y = Math.sin(deltaLambda) * Math.cos(phi2);
+    const x =
+        Math.cos(phi1) * Math.sin(phi2) -
+        Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+
+    return (toDegrees(Math.atan2(y, x)) + 360) % 360;
+}
+
+function updateQiblaDisplayForDistrict(districtKey) {
+    const info = DISTRICT_COORDS[districtKey] || DISTRICT_COORDS.Dhaka;
+    currentQiblaBearing = calculateQiblaBearing(info.lat, info.lon);
+    const roundedDeg = Math.round(currentQiblaBearing);
+
+    const locLabel = document.getElementById('qibla-location-label');
+    const degText = document.getElementById('qibla-degree-text');
+    const pointer = document.getElementById('qibla-pointer');
+
+    if (locLabel) {
+        locLabel.textContent = `নির্বাচিত জেলা: ${info.bn}`;
+    }
+    if (degText) {
+        degText.textContent = `কিবলা কোণ: উত্তর থেকে ${roundedDeg}° (পশ্চিম-উত্তর-পশ্চিম)`;
+    }
+    if (pointer && !compassListenerActive) {
+        pointer.style.transform = `rotate(${currentQiblaBearing}deg)`;
+    }
+}
+
+function handleDeviceOrientation(event) {
+    let heading = null;
+
+    if (typeof event.webkitCompassHeading === 'number' && !isNaN(event.webkitCompassHeading)) {
+        heading = event.webkitCompassHeading;
+    } else if (typeof event.alpha === 'number' && !isNaN(event.alpha)) {
+        heading = (360 - event.alpha) % 360;
+    }
+
+    if (heading === null) return;
+
+    const pointer = document.getElementById('qibla-pointer');
+    const statusEl = document.getElementById('compass-status');
+    const relativeQiblaAngle = (currentQiblaBearing - heading + 360) % 360;
+
+    if (pointer) {
+        pointer.style.transform = `rotate(${relativeQiblaAngle}deg)`;
+    }
+    if (statusEl) {
+        statusEl.textContent = `লাইভ কম্পাস সক্রিয় • বর্তমান হেডিং: ${Math.round(heading)}° • কিবলা: ${Math.round(currentQiblaBearing)}°`;
+    }
+}
+
+function bindOrientationEvent() {
+    if (compassListenerActive) return;
+
+    if ('ondeviceorientationabsolute' in window) {
+        window.addEventListener('deviceorientationabsolute', handleDeviceOrientation, true);
+    }
+    window.addEventListener('deviceorientation', handleDeviceOrientation, true);
+    compassListenerActive = true;
+}
+
+async function requestCompassPermission() {
+    const statusEl = document.getElementById('compass-status');
+
+    if (!('DeviceOrientationEvent' in window)) {
+        if (statusEl) {
+            statusEl.textContent = 'এই ডিভাইসে কম্পাস সেন্সর পাওয়া যায়নি। তবে উপরের কোণ (ডিগ্রি) অনুযায়ী কিবলার দিক নির্ণয় করতে পারবেন।';
         }
-        playAlarmSound(false);
-    }
-    updateAlarmUI();
-}
-
-function showAlarmBanner(title, desc) {
-    const banner = document.getElementById('alarm-alert-banner');
-    document.getElementById('alarm-banner-title').innerText = title;
-    document.getElementById('alarm-banner-desc').innerText = desc;
-    banner.style.display = 'flex';
-}
-
-function dismissAlarmBanner() {
-    document.getElementById('alarm-alert-banner').style.display = 'none';
-}
-
-// প্রতি ১০ সেকেন্ড পরপর চেক করা যে কোনো ওয়াক্ত শেষ হতে ৩০ মিনিট বাকি কি না এবং তারিখ বদলেছে কি না
-function checkAlarmsAndDate() {
-    const now = new Date();
-
-    // রাত ১২টার পর নতুন দিন শুরু হলে অটোমেটিক নতুন দিনের নামাজের সময়সূচি লোড করা
-    if (now.toDateString() !== lastLoadedDateStr) {
-        lastLoadedDateStr = now.toDateString();
-        triggeredAlarmsToday.clear();
-        fetchPrayerTimes();
         return;
     }
 
-    if (!isAlarmEnabled || scheduledAlarms.length === 0) return;
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+            const response = await DeviceOrientationEvent.requestPermission();
+            if (response === 'granted') {
+                bindOrientationEvent();
+                if (statusEl) {
+                    statusEl.textContent = 'কম্পাস পারমিশন দেওয়া হয়েছে। ফোনটি সমতল রেখে ঘোরান।';
+                }
+            } else if (statusEl) {
+                statusEl.textContent = 'কম্পাস পারমিশন দেওয়া হয়নি। পুনরায় ক্লিক করে অনুমতি দিন।';
+            }
+        } catch (err) {
+            if (statusEl) {
+                statusEl.textContent = 'কম্পাস অনুমতির সময় সমস্যা হয়েছে।';
+            }
+        }
+    } else {
+        bindOrientationEvent();
+        if (statusEl) {
+            statusEl.textContent = 'লাইভ কম্পাস সক্রিয় করা হয়েছে। ফোনটি সমতল রেখে ঘোরান।';
+        }
+    }
+}
 
-    const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+// সময় ফরম্যাট ও হিসাবের হেল্পার
+function parseTimeToMinutes(timeStr) {
+    if (!timeStr) return null;
+    const clean = timeStr.replace(/\s*\(.*?\)/g, '').trim().slice(0, 5);
+    const parts = clean.split(':');
+    if (parts.length < 2) return null;
+    const hours = parseInt(parts[0], 10);
+    const mins = parseInt(parts[1], 10);
+    if (isNaN(hours) || isNaN(mins)) return null;
+    return hours * 60 + mins;
+}
 
-    scheduledAlarms.forEach(alarm => {
-        const alarmKey = `${lastLoadedDateStr}-${alarm.prayerName}`;
-        if (alarm.alarmTime24 === currentHHMM && !triggeredAlarmsToday.has(alarmKey)) {
-            triggeredAlarmsToday.add(alarmKey);
+function formatMinutesTo12Hr(totalMins) {
+    const normalized = ((totalMins % 1440) + 1440) % 1440;
+    let hours24 = Math.floor(normalized / 60);
+    const mins = normalized % 60;
+    const period = hours24 >= 12 ? 'PM' : 'AM';
+    let hours12 = hours24 % 12;
+    if (hours12 === 0) hours12 = 12;
+    return `${hours12}:${String(mins).padStart(2, '0')} ${period}`;
+}
+
+// নামাজের সময়সূচি লোড (Aladhan API)
+async function loadPrayerTimes() {
+    const selectEl = document.getElementById('district-select');
+    const container = document.getElementById('prayer-times-container');
+    const hijriEl = document.getElementById('hijri-date');
+    const dateEl = document.getElementById('current-date');
+
+    const districtKey = selectEl ? selectEl.value : 'Dhaka';
+    const districtInfo = DISTRICT_COORDS[districtKey] || DISTRICT_COORDS.Dhaka;
+
+    if (container) {
+        container.innerHTML = '<div class="loading">সময়সূচি লোড হচ্ছে...</div>';
+    }
+
+    try {
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const yyyy = now.getFullYear();
+
+        const res = await fetch(
+            `https://api.aladhan.com/v1/timings/${dd}-${mm}-${yyyy}?latitude=${districtInfo.lat}&longitude=${districtInfo.lon}&method=1`
+        );
+        const data = await res.json();
+
+        if (data.code !== 200 || !data.data) {
+            throw new Error('Failed to load prayer times');
+        }
+
+        const timings = data.data.timings;
+        const hijri = data.data.date.hijri;
+        const readableDate = data.data.date.readable;
+
+        if (hijriEl) {
+            hijriEl.textContent = `${hijri.day} ${hijri.month.en}, ${hijri.year} হিজরি`;
+        }
+        if (dateEl) {
+            dateEl.textContent = `${readableDate} (${districtInfo.bn})`;
+        }
+
+        const prayers = [
+            { key: 'Fajr', name: 'ফজর (সেহরি শেষ)', nextKey: 'Sunrise' },
+            { key: 'Sunrise', name: 'সূর্যোদয়', isNonWaqt: true },
+            { key: 'Dhuhr', name: 'যোহর', nextKey: 'Asr' },
+            { key: 'Asr', name: 'আসর', nextKey: 'Maghrib' },
+            { key: 'Maghrib', name: 'মাগরিব (ইফতার)', nextKey: 'Isha' },
+            { key: 'Isha', name: 'ইশা', nextKey: 'Fajr' }
+        ];
+
+        alarmScheduleItems = [];
+        let gridHtml = '';
+
+        prayers.forEach((p) => {
+            const rawTime = timings[p.key];
+            const displayTime = formatMinutesTo12Hr(parseTimeToMinutes(rawTime));
+            let subNote = '';
+
+            if (p.key === 'Sunrise') {
+                subNote = 'নিষিদ্ধ সময় শুরু';
+            } else if (p.nextKey) {
+                let endMins = parseTimeToMinutes(timings[p.nextKey]);
+                if (p.key === 'Isha' && endMins <= parseTimeToMinutes(rawTime)) {
+                    endMins += 1440;
+                }
+                const alarmMins = endMins - 30;
+                const alarmTimeFormatted = formatMinutesTo12Hr(alarmMins);
+                subNote = `🔔 অ্যালার্ম: ${alarmTimeFormatted}`;
+
+                alarmScheduleItems.push({
+                    waqtName: p.name,
+                    alarmMins: ((alarmMins % 1440) + 1440) % 1440,
+                    alarmLabel: alarmTimeFormatted
+                });
+            }
+
+            gridHtml += `
+                <div class="prayer-box">
+                    <h4>${p.name}</h4>
+                    <p>${displayTime}</p>
+                    <small>${subNote}</small>
+                </div>
+            `;
+        });
+
+        if (container) {
+            container.innerHTML = gridHtml;
+        }
+    } catch (error) {
+        if (container) {
+            container.innerHTML = '<div class="card"><p>নামাজের সময়সূচি লোড করা যায়নি। ইন্টারনেট সংযোগ যাচাই করুন।</p></div>';
+        }
+    }
+}
+
+// ওয়াক্ত শেষ হওয়ার ৩০ মিনিট আগে অ্যালার্ম ফাংশন
+function togglePrayerAlarm() {
+    prayerAlarmEnabled = !prayerAlarmEnabled;
+    const btn = document.getElementById('alarm-toggle-btn');
+    const statusText = document.getElementById('alarm-status-text');
+
+    if (prayerAlarmEnabled) {
+        if (btn) {
+            btn.textContent = 'চালু আছে ✓';
+            btn.classList.add('active');
+        }
+        if (statusText) {
+            statusText.textContent = 'সক্রিয়: প্রতি ওয়াক্ত শেষের ৩০ মিনিট আগে অ্যালার্ম বাজবে';
+        }
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().catch(() => {});
+        }
+    } else {
+        if (btn) {
+            btn.textContent = 'চালু করুন';
+            btn.classList.remove('active');
+        }
+        if (statusText) {
+            statusText.textContent = 'বর্তমানে বন্ধ আছে (চালু করতে বাটনে ক্লিক করুন)';
+        }
+    }
+}
+
+function playAlarmSound(isTest = false) {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+            const ctx = new AudioCtx();
+            const notes = [523.25, 659.25, 783.99];
+            notes.forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.15, ctx.currentTime + idx * 0.22);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.22 + 0.45);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(ctx.currentTime + idx * 0.22);
+                osc.stop(ctx.currentTime + idx * 0.22 + 0.48);
+            });
+        }
+    } catch (e) {}
+
+    if (isTest) {
+        const banner = document.getElementById('alarm-alert-banner');
+        const title = document.getElementById('alarm-banner-title');
+        const desc = document.getElementById('alarm-banner-desc');
+        if (banner && title && desc) {
+            title.textContent = '🔔 অ্যালার্ম সাউন্ড টেস্ট';
+            desc.textContent = 'ওয়াক্ত শেষ হওয়ার ৩০ মিনিট আগে এভাবেই অ্যালার্ম সতর্কবার্তা দেখাবে।';
+            banner.style.display = 'flex';
+        }
+    }
+}
+
+function dismissAlarmBanner() {
+    const banner = document.getElementById('alarm-alert-banner');
+    if (banner) {
+        banner.style.display = 'none';
+    }
+}
+
+function checkPrayerAlarms() {
+    if (!prayerAlarmEnabled || alarmScheduleItems.length === 0) return;
+
+    const now = new Date();
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+    const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+
+    alarmScheduleItems.forEach((item) => {
+        const uniqueKey = `${dateKey}-${item.waqtName}-${item.alarmMins}`;
+        if (currentMins === item.alarmMins && !triggeredAlarmKeys.has(uniqueKey)) {
+            triggeredAlarmKeys.add(uniqueKey);
             playAlarmSound(false);
 
-            const title = `⚠️ ${alarm.prayerName}-এর ওয়াক্ত শেষ হতে ৩০ মিনিট বাকি!`;
-            const desc = `${alarm.endTime12}-এ ${alarm.prayerName}-এর সময় শেষ হয়ে যাবে। ব্যস্ততা রেখে দ্রুত নামাজ পড়ে নিন।`;
+            const banner = document.getElementById('alarm-alert-banner');
+            const title = document.getElementById('alarm-banner-title');
+            const desc = document.getElementById('alarm-banner-desc');
+            if (banner && title && desc) {
+                title.textContent = `⚠️ ${item.waqtName} ওয়াক্ত শেষ হতে ৩০ মিনিট বাকি!`;
+                desc.textContent = `সময় ${item.alarmLabel} — দ্রুত নামাজ আদায় করে নিন।`;
+                banner.style.display = 'flex';
+            }
 
-            showAlarmBanner(title, desc);
-
-            if ("Notification" in window && Notification.permission === "granted") {
-                new Notification(title, { body: desc });
+            if ('Notification' in window && Notification.permission === 'granted') {
+                try {
+                    new Notification(`${item.waqtName} ওয়াক্ত শেষ হতে ৩০ মিনিট বাকি`, {
+                        body: 'দ্রুত নামাজ আদায় করে নিন।'
+                    });
+                } catch (e) {}
             }
         }
     });
 }
 
-// ১. নামাজের সময়সূচি লোড করা (Aladhan API)
-async function fetchPrayerTimes() {
-    const city = document.getElementById('district-select').value;
-    const container = document.getElementById('prayer-times-container');
-    container.innerHTML = '<div class="loading">সময়সূচি লোড হচ্ছে...</div>';
+// রমজান ২০২৭ ক্যালেন্ডার রেন্ডার (সম্ভাব্য সময়সূচি)
+function renderRamadan2027Schedule(districtKey) {
+    const tbody = document.getElementById('ramadan-table-body');
+    const labelEl = document.getElementById('ramadan-district-label');
+    const info = DISTRICT_COORDS[districtKey] || DISTRICT_COORDS.Dhaka;
 
-    try {
-        const res = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=${city}&country=Bangladesh&method=1`);
-        const data = await res.json();
-        const timings = data.data.timings;
-        const dateInfo = data.data.date;
-
-        document.getElementById('current-date').innerText = dateInfo.readable;
-        document.getElementById('hijri-date').innerText = `${dateInfo.hijri.day} ${dateInfo.hijri.month.en}, ${dateInfo.hijri.year} হিজরি`;
-
-        const prayers = [
-            { name: 'ফজর (সেহরি শেষ)', time: timings.Fajr, endTime: timings.Sunrise, hasAlarm: true, alarmLabel: 'ফজর' },
-            { name: 'সূর্যোদয়', time: timings.Sunrise, hasAlarm: false },
-            { name: 'যোহর', time: timings.Dhuhr, endTime: timings.Asr, hasAlarm: true, alarmLabel: 'যোহর' },
-            { name: 'আসর', time: timings.Asr, endTime: timings.Maghrib, hasAlarm: true, alarmLabel: 'আসর' },
-            { name: 'মাগরিব (ইফতার)', time: timings.Maghrib, endTime: timings.Isha, hasAlarm: true, alarmLabel: 'মাগরিব' },
-            { name: 'ইশা', time: timings.Isha, endTime: timings.Fajr, hasAlarm: true, alarmLabel: 'ইশা' }
-        ];
-
-        // ওয়াক্ত শেষ হওয়ার ৩০ মিনিট আগে অ্যালার্ম সিডিউল (+১ মিনিট সমন্বয়সহ শেষ সময় থেকে ৩০ মিনিট বিয়োগ = -২৯ মিনিট)
-        scheduledAlarms = prayers
-            .filter(p => p.hasAlarm)
-            .map(p => ({
-                prayerName: p.alarmLabel,
-                alarmTime24: adjustTimeMinutes(p.endTime, -29),
-                alarmTime12: formatTime12Hour(p.endTime, -29),
-                endTime12: formatTime12Hour(p.endTime, 1)
-            }));
-
-        container.innerHTML = prayers.map(p => {
-            const alarmNote = p.hasAlarm
-                ? `<small>🔔 অ্যালার্ম: ${formatTime12Hour(p.endTime, -29)}</small>`
-                : `<small>নিষিদ্ধ সময় শুরু</small>`;
-            return `
-                <div class="prayer-box">
-                    <h4>${p.name}</h4>
-                    <p>${formatTime12Hour(p.time, 1)}</p>
-                    ${alarmNote}
-                </div>
-            `;
-        }).join('');
-    } catch (error) {
-        container.innerHTML = '<p>ইন্টারনেট সংযোগ পরীক্ষা করুন। সময়সূচি লোড করা যায়নি।</p>';
+    if (labelEl) {
+        labelEl.textContent = `নির্বাচিত জেলা: ${info.bn} • চাঁদ দেখার সাপেক্ষে ১–২ দিন পরিবর্তন হতে পারে`;
     }
+    if (!tbody) return;
+
+    const baseStartDate = new Date(2027, 2, 10);
+    const baseSehriMins = 4 * 60 + 51;
+    const baseIftarMins = 18 * 60 + 6;
+
+    const banglaDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    const toBnNum = (num) => String(num).replace(/\d/g, (d) => banglaDigits[d]);
+
+    let rowsHtml = '';
+    for (let day = 1; day <= 30; day++) {
+        const d = new Date(baseStartDate);
+        d.setDate(baseStartDate.getDate() + (day - 1));
+
+        const dateLabel = d.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+
+        const dailyShift = day - 1;
+        const sehriMins = baseSehriMins - Math.floor(dailyShift * 0.7) + info.offsetMin;
+        const iftarMins = baseIftarMins + Math.floor(dailyShift * 0.4) + info.offsetMin;
+
+        rowsHtml += `
+            <tr>
+                <td><strong>${toBnNum(day)} রমজান</strong></td>
+                <td>${dateLabel}</td>
+                <td>${formatMinutesTo12Hr(sehriMins)}</td>
+                <td>${formatMinutesTo12Hr(iftarMins)}</td>
+            </tr>
+        `;
+    }
+
+    tbody.innerHTML = rowsHtml;
 }
 
-// ২. আল-কুরআনের সূরা তালিকা লোড করা
-async function fetchSurahList() {
-    const select = document.getElementById('surah-select');
+function onDistrictChange() {
+    const selectEl = document.getElementById('district-select');
+    const district = selectEl ? selectEl.value : 'Dhaka';
+    updateQiblaDisplayForDistrict(district);
+    renderRamadan2027Schedule(district);
+    loadPrayerTimes();
+}
+
+// আল-কুরআন সূরার তালিকা ও আয়াত লোড
+let surahListData = [];
+
+async function loadSurahList() {
+    const selectEl = document.getElementById('surah-select');
+    if (!selectEl) return;
+
     try {
         const res = await fetch('https://api.alquran.cloud/v1/surah');
         const data = await res.json();
 
-        select.innerHTML = '<option value="">-- একটি সূরা বেছে নিন --</option>' +
-            data.data.map(surah => `<option value="${surah.number}">${surah.number}. ${surah.englishName} (${surah.name})</option>`).join('');
+        if (data.code === 200 && Array.isArray(data.data)) {
+            surahListData = data.data;
+            selectEl.innerHTML = '<option value="">-- একটি সূরা নির্বাচন করুন --</option>';
+
+            data.data.forEach((surah) => {
+                const option = document.createElement('option');
+                option.value = surah.number;
+                option.textContent = `${surah.number}. ${surah.name} (${surah.englishName} - ${surah.numberOfAyahs} আয়াত)`;
+                selectEl.appendChild(option);
+            });
+
+            selectEl.value = 1;
+            loadSurah();
+        }
     } catch (error) {
-        select.innerHTML = '<option>সূরা লোড করতে সমস্যা হয়েছে</option>';
+        selectEl.innerHTML = '<option value="">সূরার তালিকা লোড করা যায়নি</option>';
     }
 }
 
-// নির্বাচিত সূরার আয়াত ও বাংলা অনুবাদ লোড করা
+function stripLeadingBismillah(arabicText) {
+    if (!arabicText) return '';
+    const bismillahPatterns = [
+        /^بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/u,
+        /^بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِیمِ\s*/u,
+        /^بسم الله الرحمن الرحيم\s*/u
+    ];
+
+    let cleaned = arabicText.trim();
+    for (const pattern of bismillahPatterns) {
+        if (pattern.test(cleaned)) {
+            cleaned = cleaned.replace(pattern, '').trim();
+            break;
+        }
+    }
+    return cleaned;
+}
+
+function normalizeFatihaFirstAyah(arabicText) {
+    const stripped = stripLeadingBismillah(arabicText);
+    if (!stripped) {
+        return 'ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَـٰلَمِینَ';
+    }
+    return stripped;
+}
+
 async function loadSurah() {
-    const surahNumber = document.getElementById('surah-select').value;
-    const container = document.getElementById('ayah-container');
+    const selectEl = document.getElementById('surah-select');
+    const ayahContainer = document.getElementById('ayah-container');
     const audioContainer = document.getElementById('audio-container');
     const audioPlayer = document.getElementById('surah-audio');
 
+    if (!selectEl || !ayahContainer) return;
+
+    const surahNumber = parseInt(selectEl.value, 10);
     if (!surahNumber) {
-        container.innerHTML = '';
-        audioContainer.style.display = 'none';
+        ayahContainer.innerHTML = '';
+        if (audioContainer) audioContainer.style.display = 'none';
         return;
     }
 
-    container.innerHTML = '<p>আয়াত লোড হচ্ছে...</p>';
-    audioPlayer.src = `https://cdn.islamic.network/quran/audio-surah/128/ar.alafasy/${surahNumber}.mp3`;
-    audioContainer.style.display = 'block';
+    ayahContainer.innerHTML = '<div class="card"><p>আয়াতগুলো লোড হচ্ছে...</p></div>';
 
     try {
         const [arabicRes, banglaRes] = await Promise.all([
-            fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}`),
+            fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/quran-uthmani`),
             fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/bn.bengali`)
         ]);
 
         const arabicData = await arabicRes.json();
         const banglaData = await banglaRes.json();
 
-        const ayahs = arabicData.data.ayahs;
-        const translations = banglaData.data.ayahs;
+        if (arabicData.code !== 200 || banglaData.code !== 200) {
+            throw new Error('API response error');
+        }
 
-        container.innerHTML = ayahs.map((ayah, index) => `
-            <div class="ayah-card">
-                <div class="arabic-text">${ayah.text} ﴿${ayah.numberInSurah}﴾</div>
-                <div class="bangla-text">${translations[index].text}</div>
-            </div>
-        `).join('');
-    } catch (error) {
-        container.innerHTML = '<p>আয়াত লোড করতে সমস্যা হয়েছে।</p>';
-    }
-}
+        const arabicAyahs = arabicData.data.ayahs;
+        const banglaAyahs = banglaData.data.ayahs;
 
-// ৩. ২০২৭ সালের রমজান ক্যালেন্ডার (সবসময় ৩০টি রোজা নিশ্চিত করার ব্যবস্থা)
-async function loadRamadan2027() {
-    const tbody = document.getElementById('ramadan-table-body');
-    try {
-        const [febRes, marRes] = await Promise.all([
-            fetch('https://api.aladhan.com/v1/calendarByCity/2027/2?city=Dhaka&country=Bangladesh&method=1'),
-            fetch('https://api.aladhan.com/v1/calendarByCity/2027/3?city=Dhaka&country=Bangladesh&method=1')
-        ]);
+        if (audioContainer && audioPlayer) {
+            const paddedNum = String(surahNumber).padStart(3, '0');
+            audioPlayer.src = `https://download.quranicaudio.com/quran/mishaari_rashid_al_afaasee/${paddedNum}.mp3`;
+            audioContainer.style.display = 'block';
+        }
 
-        const febData = await febRes.json();
-        const marData = await marRes.json();
-        const allDays = [...febData.data, ...marData.data];
+        let html = '';
 
-        let ramadanDays = allDays.filter(day => day.date.hijri.month.number === 9);
+        // সূরা আত-তাওবাহ (৯) ছাড়া সূরা ফাতিহাসহ সব সূরার শুরুতে বিসমিল্লাহ আলাদা শুরু-বাক্য হিসেবে দেখানো
+        if (surahNumber !== 9) {
+            html += `
+                <div class="card" style="text-align: center;">
+                    <p class="arabic-text" style="text-align: center; margin-bottom: 0.4rem;">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
+                    <p class="bangla-text">পরম করুণাময় অসীম দয়ালু আল্লাহর নামে শুরু করছি</p>
+                </div>
+            `;
+        }
 
-        if (ramadanDays.length > 0 && ramadanDays.length < 30) {
-            const lastDayIndex = allDays.findIndex(d => d.date.gregorian.date === ramadanDays[ramadanDays.length - 1].date.gregorian.date);
-            if (lastDayIndex !== -1 && allDays[lastDayIndex + 1]) {
-                ramadanDays.push(allDays[lastDayIndex + 1]);
+        arabicAyahs.forEach((ayah, index) => {
+            const realAyahNumber = ayah.numberInSurah;
+            let displayArabic = ayah.text;
+
+            if (surahNumber === 1 && realAyahNumber === 1) {
+                displayArabic = normalizeFatihaFirstAyah(displayArabic);
+            } else if (realAyahNumber === 1) {
+                displayArabic = stripLeadingBismillah(displayArabic);
             }
-        }
 
-        ramadanDays = ramadanDays.slice(0, 30);
+            const banglaMeaning = banglaAyahs[index] ? banglaAyahs[index].text : '';
 
-        if (ramadanDays.length > 0) {
-            tbody.innerHTML = ramadanDays.map((day, index) => `
-                <tr>
-                    <td><strong>${index + 1} রমজান</strong></td>
-                    <td>${day.date.readable}</td>
-                    <td>${formatTime12Hour(day.timings.Fajr, 1)}</td>
-                    <td>${formatTime12Hour(day.timings.Maghrib, 1)}</td>
-                </tr>
-            `).join('');
-        } else {
-            tbody.innerHTML = '<tr><td colspan="4">তথ্য পাওয়া যায়নি।</td></tr>';
-        }
+            html += `
+                <div class="ayah-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="font-weight: 700; color: #fbbf24;">আয়াত ${realAyahNumber}</span>
+                    </div>
+                    <p class="arabic-text">${displayArabic}</p>
+                    <p class="bangla-text">${banglaMeaning}</p>
+                </div>
+            `;
+        });
+
+        ayahContainer.innerHTML = html;
     } catch (error) {
-        tbody.innerHTML = '<tr><td colspan="4">ক্যালেন্ডার লোড করতে সমস্যা হয়েছে।</td></tr>';
+        ayahContainer.innerHTML = '<div class="card"><p>আয়াত লোড করতে সমস্যা হয়েছে। ইন্টারনেট সংযোগ যাচাই করুন।</p></div>';
     }
 }
 
-// ৪. দোয়া ও তাসবিহ সেকশন
-const duas = [
-    {
-        title: "ঘুম থেকে ওঠার দোয়া",
-        arabic: "الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ",
-        bangla: "সমস্ত প্রশংসা সেই আল্লাহর জন্য, যিনি আমাদের মৃত্যু (নিদ্রা) দেওয়ার পর জীবিত করলেন এবং তাঁরই কাছে আমাদের ফিরে যেতে হবে।"
-    },
-    {
-        title: "ঘর থেকে বের হওয়ার দোয়া",
-        arabic: "بِسْمِ اللَّهِ تَوَكَّلْتُ عَلَى اللَّهِ، وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ",
-        bangla: "আল্লাহর নামে বের হচ্ছি, আল্লাহর ওপর ভরসা করলাম। আর আল্লাহর সাহায্য ছাড়া কোনো উপায় ও শক্তি নেই।"
-    },
-    {
-        title: "বিপদ থেকে রক্ষার দোয়া (দোয়া ইউনুস)",
-        arabic: "لَا إِلَٰهَ إِلَّا أَنْتَ سُبْحَانَكَ إِنِّي كُنْتُ مِنَ الظَّالِمِينَ",
-        bangla: "তুমি ব্যতীত কোনো উপাস্য নেই; তুমি পবিত্র ও মহান! নিশ্চয়ই আমি সীমালঙ্ঘনকারীদের অন্তর্ভুক্ত।"
-    },
-    {
-        title: "পিতা-মাতার জন্য দোয়া",
-        arabic: "رَبِّ ارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا",
-        bangla: "হে আমার প্রতিপালক! তাদের উভয়ের প্রতি দয়া করুন, যেভাবে তারা আমাকে শৈশবে লালন-পালন করেছেন।"
-    }
-];
+// ডিজিটাল তাসবিহ
+let tasbihCount = parseInt(localStorage.getItem('noor_tasbih_count') || '0', 10);
 
-function renderDuas() {
-    const container = document.getElementById('dua-list-container');
-    container.innerHTML = duas.map(d => `
-        <div class="dua-card">
-            <h4>${d.title}</h4>
-            <div class="arabic-text">${d.arabic}</div>
-            <div class="bangla-text">${d.bangla}</div>
-        </div>
-    `).join('');
+function updateTasbihDisplay() {
+    const display = document.getElementById('tasbih-count');
+    if (display) {
+        display.textContent = tasbihCount;
+    }
+    localStorage.setItem('noor_tasbih_count', tasbihCount);
 }
 
-let tasbihCount = 0;
 function incrementTasbih() {
-    tasbihCount++;
-    document.getElementById('tasbih-count').innerText = tasbihCount;
+    tasbihCount += 1;
+    updateTasbihDisplay();
 }
 
 function resetTasbih() {
     tasbihCount = 0;
-    document.getElementById('tasbih-count').innerText = tasbihCount;
+    updateTasbihDisplay();
 }
 
-// অ্যাপ চালু হলে সব ডেটা লোড করা
-window.onload = () => {
-    updateAlarmUI();
-    fetchPrayerTimes();
-    fetchSurahList();
-    loadRamadan2027();
-    renderDuas();
-    setInterval(checkAlarmsAndDate, 10000);
-};
+// দোয়ার পূর্ণ তালিকা
+const duaList = [
+    {
+        title: "ঘুম থেকে ওঠার দোয়া",
+        arabic: "الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ",
+        bangla: "উচ্চারণ: আলহামদু লিল্লাযী আহইয়ানা বা'দা মা আমাতানা ওয়া ইলাইহিন নুশূর। অর্থ: যাবতীয় প্রশংসা আল্লাহর জন্য, যিনি আমাদের মৃত্যু দেওয়ার পর পুনরায় জীবিত করেছেন এবং তাঁরই কাছে ফিরে যেতে হবে।"
+    },
+    {
+        title: "ঘর থেকে বের হওয়ার দোয়া",
+        arabic: "بِسْمِ اللَّهِ تَوَكَّلْتُ عَلَى اللَّهِ وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ",
+        bangla: "উচ্চারণ: বিসমিল্লাহি তাওয়াক্কালতু আলাল্লাহি ওয়া লা হাওলা ওয়া লা কুওয়াতা ইল্লা বিল্লাহ। অর্থ: আল্লাহর নামে বের হচ্ছি, আল্লাহর ওপরই ভরসা করলাম; আল্লাহ ছাড়া কোনো ক্ষমতা ও শক্তি নেই।"
+    },
+    {
+        title: "পিতা-মাতার জন্য দোয়া",
+        arabic: "رَبِّ ارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا",
+        bangla: "উচ্চারণ: রাব্বির হামহুমা কামা রাব্বায়ানী ছাগীরা। অর্থ: হে আমার প্রতিপালক! তাঁদের উভয়ের প্রতি দয়া করুন, যেমন তাঁরা শৈশবে আমাকে লালন-পালন করেছেন।"
+    },
+    {
+        title: "বিপদ থেকে রক্ষার দোয়া",
+        arabic: "حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ",
+        bangla: "উচ্চারণ: হাসবুনাল্লাহু ওয়া নি'মাল ওয়াকীল। অর্থ: আমাদের জন্য আল্লাহই যথেষ্ট এবং তিনি কতই না উত্তম কর্মবিধায়ক।"
+    },
+    {
+        title: "মসজিদে প্রবেশের দোয়া",
+        arabic: "اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ",
+        bangla: "উচ্চারণ: আল্লাহুম্মাফতাহ লী আবওয়াবা রাহমাতিক। অর্থ: হে আল্লাহ! আমার জন্য আপনার রহমতের দরজাগুলো খুলে দিন।"
+    },
+    {
+        title: "মসজিদ থেকে বের হওয়ার দোয়া",
+        arabic: "اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ",
+        bangla: "উচ্চারণ: আল্লাহুম্মা ইন্নী আসআলুকা মিন ফাদ্বলিক। অর্থ: হে আল্লাহ! নিশ্চয় আমি আপনার অনুগ্রহ প্রার্থনা করছি।"
+    },
+    {
+        title: "বাথরুমে (টয়লেটে) প্রবেশের দোয়া",
+        arabic: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبُثِ وَالْخَبَائِثِ",
+        bangla: "উচ্চারণ: আল্লাহুম্মা ইন্নী আঊযু বিকা মিনাল খুবুসি ওয়াল খাবায়িস। অর্থ: হে আল্লাহ! নিশ্চয় আমি নাপাক জিন ও শয়তান (পুরুষ ও নারী উভয় প্রকার) থেকে আপনার আশ্রয় প্রার্থনা করছি।"
+    },
+    {
+        title: "বাথরুম (টয়লেট) থেকে বের হওয়ার দোয়া",
+        arabic: "غُفْرَانَكَ",
+        bangla: "উচ্চারণ: গুফরানাকা। অর্থ: হে আল্লাহ! আমি আপনার কাছে ক্ষমা প্রার্থনা করছি।"
+    }
+];
+
+function renderDuaList() {
+    const duaContainer = document.getElementById('dua-list-container');
+    if (!duaContainer) return;
+
+    duaContainer.innerHTML = '';
+    duaList.forEach((dua) => {
+        const card = document.createElement('div');
+        card.className = 'dua-card';
+        card.innerHTML = `
+            <h4>${dua.title}</h4>
+            <p class="arabic-text">${dua.arabic}</p>
+            <p class="bangla-text">${dua.bangla}</p>
+        `;
+        duaContainer.appendChild(card);
+    });
+}
+
+// সারাদিন শেষে অটোমেটিক প্রশ্ন ও আত্মসমালোচনা (মুহাসাবা) বিশ্লেষণ
+const REFLECTION_STORAGE_KEY = 'noor_daily_reflections_v1';
+
+function checkEveningAutoPrompt() {
+    const banner = document.getElementById('evening-prompt-banner');
+    const promptEl = document.getElementById('reflection-auto-prompt');
+    if (!banner) return;
+
+    const now = new Date();
+    const hour = now.getHours();
+    const todayKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+    const dismissedKey = sessionStorage.getItem('noor_evening_dismissed_date');
+
+    // সন্ধ্যা ৬টা (১৮:০০) বা তার পরে দিনশেষের প্রশ্ন স্বয়ংক্রিয়ভাবে সামনে আনা
+    if (hour >= 18 && dismissedKey !== todayKey) {
+        banner.style.display = 'flex';
+        if (promptEl) {
+            promptEl.textContent = 'সন্ধ্যা পেরিয়ে গেছে—আজকের সারাদিন কেমন কাটল? ছোট্ট করে লিখুন, কী ভালো হলো আর কী ভুল হলো।';
+        }
+    } else {
+        banner.style.display = 'none';
+    }
+}
+
+function dismissEveningPrompt() {
+    const now = new Date();
+    const todayKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+    sessionStorage.setItem('noor_evening_dismissed_date', todayKey);
+    const banner = document.getElementById('evening-prompt-banner');
+    if (banner) banner.style.display = 'none';
+}
+
+function jumpToReflectionTab() {
+    dismissEveningPrompt();
+    openTab('reflection');
+    const input = document.getElementById('daily-summary-input');
+    if (input) input.focus();
+}
+
+function analyzeDailyEntry(text, flags) {
+    const cleanText = (text || '').trim();
+    const lower = cleanText.toLowerCase();
+
+    const goodPoints = [];
+    const badPoints = [];
+    const guidancePoints = [];
+
+    const hasSalahGood = flags.salah || /নামাজ|সালাত|ওয়াক্ত|জামাত|তাহাজ্জুদ|ফজর|যোহর|আসর|মাগরিব|ইশা/.test(cleanText);
+    const hasQuranGood = flags.quran || /কুরআন|কোরআন|তিলাওয়াত|জিকির|তাসবিহ|দোয়া|সদকা|দান/.test(cleanText);
+    const hasGoodDeed = flags.goodDeed || /ভালো কাজ|সাহায্য|মা|বাবা|পিতা|আম্মা|আব্বা|ক্ষমা|ধৈর্য|পড়াশোনা|কাজ শেষ/.test(cleanText);
+
+    const hasSalahMiss = /নামাজ ছুটে|কাজা|পড়িনি|পড়া হয়নি|ঘুমিয়ে ছিলাম/.test(cleanText);
+    const hasTimeWaste = flags.timeWaste || /সময় নষ্ট|অযথা|ফোন|রিলস|গেম|ঘুম|অলস|দেরি/.test(cleanText);
+    const hasAngerOrSin = flags.anger || /রাগ|মেজাজ|ঝগড়া|কষ্ট|মিথ্যা|গীবত|পাপ|ভুল|খারাপ|বিরক্ত/.test(cleanText);
+
+    if (hasSalahGood) {
+        goodPoints.push('আপনি নামাজ ও ইবাদতের প্রতি যত্নবান ছিলেন—এটি দিনের সবচেয়ে বড় সফলতা।');
+        guidancePoints.push('আগামীকালও প্রতিটি ওয়াক্তের শুরুতেই নামাজের প্রস্তুতি নিন, যেন শেষ সময়ের তাড়াহুড়ো না থাকে।');
+    }
+    if (hasQuranGood) {
+        goodPoints.push('কুরআন, দোয়া বা জিকিরের মাধ্যমে অন্তরকে সজীব রাখার চেষ্টা করেছেন।');
+        guidancePoints.push('কালও অন্তত ১০–১৫ মিনিট কুরআন বা জিকিরের জন্য নির্দিষ্ট সময় আলাদা রাখুন।');
+    }
+    if (hasGoodDeed) {
+        goodPoints.push('পরিবার, কাজ বা কারও উপকারে ইতিবাচক ভূমিকা রেখেছেন।');
+        guidancePoints.push('এই সদাচরণ ও দায়িত্বশীলতা আগামীকালও ধরে রাখার চেষ্টা করুন।');
+    }
+    if (goodPoints.length === 0) {
+        goodPoints.push('দিনশেষে নিজের ভুল-শুদ্ধি খতিয়ে দেখার জন্য যে সময় নিয়েছেন—আত্মশুদ্ধির পথে এটিই একটি ভালো পদক্ষেপ।');
+        guidancePoints.push('আগামীকাল দিনের শুরুতেই অন্তত ৩টি ছোট ভালো কাজ (যেমন—সময়মতো নামাজ, কুরআন ও ভালো আচরণ) ঠিক করে নিন।');
+    }
+
+    if (hasSalahMiss) {
+        badPoints.push('কোনো ওয়াক্তের নামাজ সময়মতো আদায় না হওয়া বা ছুটে যাওয়া একটি বড় ঘাটতি।');
+        guidancePoints.push('ছুটে যাওয়া নামাজ থাকলে দ্রুত কাজা আদায় করুন এবং পরের দিন ওয়াক্ত শুরুর আগেই অ্যালার্ম বা রিমাইন্ডার সেট রাখুন।');
+    }
+    if (hasTimeWaste) {
+        badPoints.push('অপ্রয়োজনীয় স্ক্রিন টাইম, অলসতা বা পরিকল্পনার অভাবে মূল্যবান সময়ের অপচয় হয়েছে।');
+        guidancePoints.push('আগামীকাল নির্দিষ্ট সময়ে ফোন/সোশ্যাল মিডিয়া বন্ধ রাখার নিয়ম করুন এবং কাজের টু-ডু লিস্ট লিখে রাখুন।');
+    }
+    if (hasAngerOrSin) {
+        badPoints.push('রাগ, অসতর্ক কথা বা এমন কোনো আচরণ হয়েছে যা কারও মনে কষ্ট দিতে পারে বা আমলের ক্ষতি করে।');
+        guidancePoints.push('রাগ উঠলে চুপ থাকুন, জায়গা বদলান বা অজু করে নিন—এবং কারও মনে কষ্ট দিয়ে থাকলে ক্ষমা চেয়ে নিন।');
+    }
+    if (badPoints.length === 0 && cleanText.length > 0) {
+        badPoints.push('আপনার লেখায় বড় কোনো স্পষ্ট ভুল ধরা না পড়লেও, সারাদিনের প্রতিটি মুহূর্ত আরও সচেতনভাবে কাজে লাগানোর সুযোগ রয়েছে।');
+        guidancePoints.push('আগামীকাল আরও মনোযোগ ও শৃঙ্খলার সাথে দিনটি সাজানোর চেষ্টা করুন।');
+    } else if (badPoints.length === 0) {
+        badPoints.push('সারাদিনের বিস্তারিত কথা কম থাকায় নির্দিষ্ট ঘাটতিগুলো আলাদা করে চিহ্নিত করা যায়নি।');
+    }
+
+    if (cleanText) {
+        guidancePoints.push(`আজকের অভিজ্ঞতা ("${cleanText.slice(0, 70)}${cleanText.length > 70 ? '...' : ''}") মাথায় রেখে কালকের পরিকল্পনা সাজান।`);
+    }
+
+    let repentanceText =
+        'মানুষ মাত্রই ভুল করে; তবে যে ভুল বুঝতে পেরে আল্লাহর কাছে ফিরে আসে, সেই প্রকৃত সফল। আজকের যেসব ঘাটতি বা অসতর্কতা হয়েছে, সেগুলোর জন্য আন্তরিকভাবে অনুতপ্ত হয়ে আল্লাহর কাছে ক্ষমা প্রার্থনা করুন—যাতে আগামীকাল নতুন উদ্যমে সঠিক পথে চলতে পারেন।';
+
+    if (badPoints.length === 1 && !hasSalahMiss && !hasTimeWaste && !hasAngerOrSin) {
+        repentanceText =
+            'আলহামদুলিল্লাহ, আজকের দিনটি তুলনামূলক ভালো কেটেছে। তবুও অজান্তে হয়ে যাওয়া কোনো ছোট ভুল বা ত্রুটির জন্য আল্লাহর কাছে ইস্তিগফার করুন এবং শুকরিয়া আদায় করুন।';
+    }
+
+    return {
+        goodPoints,
+        badPoints,
+        repentanceText,
+        guidancePoints
+    };
+}
+
+function renderReflectionReport(report, summaryText) {
+    const box = document.getElementById('reflection-report-box');
+    const goodList = document.getElementById('report-good-list');
+    const badList = document.getElementById('report-bad-list');
+    const repText = document.getElementById('report-repentance-text');
+    const guideList = document.getElementById('report-guidance-list');
+
+    if (!box || !goodList || !badList || !repText || !guideList) return;
+
+    goodList.innerHTML = report.goodPoints.map((item) => `<li>${item}</li>`).join('');
+    badList.innerHTML = report.badPoints.map((item) => `<li>${item}</li>`).join('');
+    repText.textContent = report.repentanceText;
+    guideList.innerHTML = report.guidancePoints.map((item) => `<li>${item}</li>`).join('');
+
+    box.style.display = 'block';
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function saveReflectionRecord(summaryText, report) {
+    const existing = JSON.parse(localStorage.getItem(REFLECTION_STORAGE_KEY) || '[]');
+    const now = new Date();
+    const entry = {
+        id: Date.now(),
+        dateText: now.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }),
+        timeText: now.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }),
+        summary: summaryText || 'চেকলিস্ট অনুযায়ী সারাদিনের হিসাব',
+        goodCount: report.goodPoints.length,
+        badCount: report.badPoints.length,
+        guidance: report.guidancePoints[0] || ''
+    };
+
+    existing.unshift(entry);
+    const trimmed = existing.slice(0, 14);
+    localStorage.setItem(REFLECTION_STORAGE_KEY, JSON.stringify(trimmed));
+    renderReflectionHistory();
+}
+
+function renderReflectionHistory() {
+    const listEl = document.getElementById('reflection-history-list');
+    if (!listEl) return;
+
+    const records = JSON.parse(localStorage.getItem(REFLECTION_STORAGE_KEY) || '[]');
+    if (records.length === 0) {
+        listEl.innerHTML = '<p class="muted-note">এখনো কোনো দিনের হিসাব সংরক্ষিত নেই।</p>';
+        return;
+    }
+
+    listEl.innerHTML = records
+        .map(
+            (rec) => `
+            <div class="history-item">
+                <div class="history-item-head">
+                    <strong>📅 ${rec.dateText}</strong>
+                    <span>${rec.timeText}</span>
+                </div>
+                <p class="bangla-text">${rec.summary}</p>
+                <small class="muted-note">আগামী দিনের দিকনির্দেশনা: ${rec.guidance}</small>
+            </div>
+        `
+        )
+        .join('');
+}
+
+function generateDailyReflection() {
+    const inputEl = document.getElementById('daily-summary-input');
+    const summaryText = inputEl ? inputEl.value.trim() : '';
+
+    const flags = {
+        salah: Boolean(document.getElementById('chk-salah')?.checked),
+        quran: Boolean(document.getElementById('chk-quran')?.checked),
+        goodDeed: Boolean(document.getElementById('chk-good-deed')?.checked),
+        timeWaste: Boolean(document.getElementById('chk-time-waste')?.checked),
+        anger: Boolean(document.getElementById('chk-anger')?.checked)
+    };
+
+    if (!summaryText && !Object.values(flags).some(Boolean)) {
+        alert('দয়া করে সারাদিনের কথা সংক্ষেপে লিখুন অথবা নিচের যেকোনো একটি অপশন নির্বাচন করুন।');
+        return;
+    }
+
+    const report = analyzeDailyEntry(summaryText, flags);
+    renderReflectionReport(report, summaryText);
+    saveReflectionRecord(summaryText, report);
+}
+
+function clearReflectionForm() {
+    const inputEl = document.getElementById('daily-summary-input');
+    if (inputEl) inputEl.value = '';
+    ['chk-salah', 'chk-quran', 'chk-good-deed', 'chk-time-waste', 'chk-anger'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.checked = false;
+    });
+    const box = document.getElementById('reflection-report-box');
+    if (box) box.style.display = 'none';
+}
+
+// পেজ লোড হলে সব ফিচার চালু করা
+document.addEventListener('DOMContentLoaded', () => {
+    updateQiblaDisplayForDistrict('Dhaka');
+    renderRamadan2027Schedule('Dhaka');
+    loadPrayerTimes();
+    updateTasbihDisplay();
+    renderDuaList();
+    loadSurahList();
+    renderReflectionHistory();
+    checkEveningAutoPrompt();
+
+    setInterval(checkPrayerAlarms, 20000);
+    setInterval(checkEveningAutoPrompt, 60000);
+});

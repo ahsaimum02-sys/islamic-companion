@@ -99,21 +99,21 @@ body {
 .tab-bar {
     display: flex;
     justify-content: center;
+    flex-wrap: wrap;
     background-color: rgba(8, 28, 25, 0.92);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border);
-    overflow-x: auto;
     position: sticky;
     top: 0;
     z-index: 100;
 }
 
 .tab-btn {
-    padding: 1rem 1.5rem;
+    padding: 0.9rem 1.15rem;
     border: none;
     background: none;
     color: var(--text-muted);
-    font-size: 1rem;
+    font-size: 0.96rem;
     font-weight: 600;
     cursor: pointer;
     border-bottom: 3px solid transparent;
@@ -130,7 +130,7 @@ body {
     border-bottom: 3px solid #fbbf24;
 }
 
-/* মোবাইল স্ক্রিনে ৪টি ট্যাব ২×২ গ্রিডে স্পষ্টভাবে দেখানোর ব্যবস্থা */
+/* মোবাইল স্ক্রিনে সব ট্যাব ২×২ গ্রিডে স্পষ্টভাবে দেখানোর ব্যবস্থা */
 @media (max-width: 600px) {
     .tab-bar {
         display: grid;
@@ -140,8 +140,8 @@ body {
     }
 
     .tab-btn {
-        padding: 0.8rem 0.6rem;
-        font-size: 0.95rem;
+        padding: 0.78rem 0.55rem;
+        font-size: 0.92rem;
         text-align: center;
         border-bottom: 1px solid var(--border);
         border-right: 1px solid var(--border);
@@ -175,6 +175,24 @@ body {
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+.evening-prompt-card {
+    background: linear-gradient(120deg, rgba(16, 185, 129, 0.22), rgba(251, 191, 36, 0.16));
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.evening-prompt-actions {
+    display: flex;
+    gap: 0.6rem;
 }
 
 .card {
@@ -336,6 +354,147 @@ select {
     color: var(--text-muted);
 }
 
+/* কিবলা কম্পাস স্টাইল */
+.qibla-header-card {
+    text-align: center;
+}
+
+.qibla-deg-box {
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid rgba(251, 191, 36, 0.22);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.qibla-deg-box span {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fbbf24;
+}
+
+.qibla-deg-box small {
+    color: #a7f3d0;
+    font-size: 0.88rem;
+}
+
+.compass-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.compass-ring {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle, rgba(16, 185, 129, 0.14) 0%, rgba(7, 27, 24, 0.95) 72%),
+        repeating-conic-gradient(
+            rgba(251, 191, 36, 0.12) 0deg 2deg,
+            transparent 2deg 30deg
+        );
+    border: 3px solid rgba(251, 191, 36, 0.45);
+    box-shadow:
+        inset 0 0 24px rgba(0, 0, 0, 0.6),
+        0 10px 28px rgba(0, 0, 0, 0.35);
+    margin: 0.5rem auto 1.4rem;
+    transition: transform 0.15s ease-out;
+}
+
+.cardinal {
+    position: absolute;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #fde68a;
+}
+
+.cardinal.n {
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fbbf24;
+}
+
+.cardinal.s {
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.cardinal.e {
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.cardinal.w {
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.qibla-pointer {
+    position: absolute;
+    inset: 0;
+    transition: transform 0.2s ease-out;
+}
+
+.kaaba-badge {
+    position: absolute;
+    top: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.5rem;
+    filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.75));
+}
+
+.pointer-arrow {
+    position: absolute;
+    top: 58px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 66px solid #fbbf24;
+}
+
+.compass-center-dot {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: #10b981;
+    border: 2px solid #fef3c7;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+}
+
+.qibla-controls {
+    display: flex;
+    justify-content: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.compass-status-text {
+    margin-top: 0.9rem;
+    font-size: 0.92rem;
+    color: var(--text-muted);
+}
+
+.qibla-tips {
+    width: 100%;
+    text-align: left;
+}
+
 .audio-box {
     margin-top: 1rem;
     padding-top: 1rem;
@@ -416,6 +575,113 @@ th {
     display: flex;
     justify-content: center;
     gap: 1rem;
+}
+
+/* দিনশেষ আত্মসমালোচনা স্টাইল */
+.reflection-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+    color: #fde68a;
+}
+
+.reflection-textarea {
+    width: 100%;
+    padding: 0.9rem;
+    border-radius: 10px;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    background-color: rgba(6, 24, 21, 0.85);
+    color: var(--text-color);
+    font-size: 1rem;
+    resize: vertical;
+}
+
+.reflection-check-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.9rem;
+}
+
+.chip-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(251, 191, 36, 0.24);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.reflection-actions {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-top: 1.1rem;
+}
+
+.analysis-card h3 {
+    margin-bottom: 0.7rem;
+}
+
+.good-box {
+    border-left: 4px solid #10b981;
+}
+
+.bad-box {
+    border-left: 4px solid #f59e0b;
+}
+
+.repentance-box {
+    border-left: 4px solid #34d399;
+}
+
+.guidance-box {
+    border-left: 4px solid #fbbf24;
+}
+
+.report-list {
+    padding-left: 1.2rem;
+}
+
+.report-list li {
+    margin-bottom: 0.45rem;
+}
+
+.reflection-dua-ar {
+    text-align: center;
+    font-size: 1.45rem;
+    margin-top: 0.9rem;
+    margin-bottom: 0.2rem;
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    margin-top: 0.7rem;
+}
+
+.history-item {
+    padding: 0.9rem 1rem;
+    border-radius: 10px;
+    background: rgba(6, 24, 21, 0.7);
+    border: 1px solid var(--border);
+}
+
+.history-item-head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.88rem;
+    color: #fde68a;
+    margin-bottom: 0.35rem;
+}
+
+.muted-note {
+    color: var(--text-muted);
+    font-size: 0.92rem;
 }
 
 .btn-primary, .btn-secondary {
