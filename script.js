@@ -52,6 +52,7 @@ const KAABA_LAT = 21.4225;
 const KAABA_LON = 39.8262;
 
 const ALARM_STORAGE_KEY = 'noor_prayer_alarm_enabled_v1';
+const LAST_AUTO_DISTRICT_KEY = 'noor_last_auto_district_v1';
 
 let currentQiblaBearing = 278;
 let smoothedHeading = null;
@@ -59,6 +60,7 @@ let compassListenerActive = false;
 let prayerAlarmEnabled = localStorage.getItem(ALARM_STORAGE_KEY) === 'true';
 let triggeredAlarmKeys = new Set();
 let alarmScheduleItems = [];
+let activeCoordsOverride = null;
 
 // পূর্ণাঙ্গ সূরা অডিও (ইয়াসির আল-দাওসারি) ফলব্যাক স্টেট
 let activeAudioSources = [];
@@ -71,6 +73,37 @@ function toRadians(deg) {
 
 function toDegrees(rad) {
     return (rad * 180) / Math.PI;
+}
+
+// দুই স্থানাঙ্কের মধ্যবর্তী দূরত্ব (কিমি)
+function calculateDistanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRadians(lat1)) *
+            Math.cos(toRadians(lat2)) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+// প্রদত্ত lat/lon অনুযায়ী সবচেয়ে কাছের জেলা খুঁজে বের করা
+function findNearestDistrictKey(lat, lon) {
+    let nearestKey = 'Dhaka';
+    let minDist = Infinity;
+
+    Object.entries(DISTRICT_COORDS).forEach(([key, info]) => {
+        const dist = calculateDistanceKm(lat, lon, info.lat, info.lon);
+        if (dist < minDist) {
+            minDist = dist;
+            nearestKey = key;
+        }
+    });
+
+    return nearestKey;
 }
 
 // কোনো স্থানাঙ্ক থেকে কাবার দিক হিসাব
@@ -89,7 +122,10 @@ function calculateQiblaBearing(lat, lon) {
 
 function updateQiblaDisplayForDistrict(districtKey) {
     const info = DISTRICT_COORDS[districtKey] || DISTRICT_COORDS.Dhaka;
-    currentQiblaBearing = calculateQiblaBearing(info.lat, info.lon);
+    const qLat = activeCoordsOverride ? activeCoordsOverride.lat : info.lat;
+    const qLon = activeCoordsOverride ? activeCoordsOverride.lon : info.lon;
+
+    currentQiblaBearing = calculateQiblaBearing(qLat, qLon);
     const roundedDeg = Math.round(currentQiblaBearing);
 
     const locLabel = document.getElementById('qibla-location-label');
@@ -131,7 +167,6 @@ function handleDeviceOrientation(event) {
     const ring = document.getElementById('compass-ring');
     const statusEl = document.getElementById('compass-status');
 
-    // তীর যেন সরাসরি ব্যবহারকারীর হাতের সামনের সাপেক্ষে কিবলার দিক দেখায়
     const relativeQiblaAngle = (currentQiblaBearing - heading + 360) % 360;
     const signedDiff = ((relativeQiblaAngle + 180) % 360) - 180;
     const isAligned = Math.abs(signedDiff) <= 6;
@@ -233,6 +268,8 @@ async function loadPrayerTimes() {
 
     const districtKey = selectEl ? selectEl.value : 'Dhaka';
     const districtInfo = DISTRICT_COORDS[districtKey] || DISTRICT_COORDS.Dhaka;
+    const queryLat = activeCoordsOverride ? activeCoordsOverride.lat : districtInfo.lat;
+    const queryLon = activeCoordsOverride ? activeCoordsOverride.lon : districtInfo.lon;
 
     if (container) {
         container.innerHTML = '<div class="loading">সময়সূচি লোড হচ্ছে...</div>';
@@ -245,7 +282,7 @@ async function loadPrayerTimes() {
         const yyyy = now.getFullYear();
 
         const res = await fetch(
-            `https://api.aladhan.com/v1/timings/${dd}-${mm}-${yyyy}?latitude=${districtInfo.lat}&longitude=${districtInfo.lon}&method=1`
+            `https://api.aladhan.com/v1/timings/${dd}-${mm}-${yyyy}?latitude=${queryLat}&longitude=${queryLon}&method=1`
         );
         const data = await res.json();
 
@@ -261,7 +298,7 @@ async function loadPrayerTimes() {
             hijriEl.textContent = `${hijri.day} ${hijri.month.en}, ${hijri.year} হিজরি`;
         }
         if (dateEl) {
-            dateEl.textContent = `${readableDate} (${districtInfo.bn})`;
+            dateEl.textContent = `${readableDate} (${districtInfo.bn} • অটো লোকেশন)`;
         }
 
         const prayers = [
@@ -471,12 +508,70 @@ function renderRamadan2027Schedule(districtKey) {
     tbody.innerHTML = rowsHtml;
 }
 
+// নির্বাচিত বা অটো-সনাক্ত জেলায় সব ফিচার আপডেট করা
+function applyDistrictSelection(districtKey, coords = null, saveAsAuto = false) {
+    const safeKey = DISTRICT_COORDS[districtKey] ? districtKey : 'Dhaka';
+    const selectEl = document.getElementById('district-select');
+
+    if (coords && typeof coords.lat === 'number' && typeof coords.lon === 'number') {
+        activeCoordsOverride = { lat: coords.lat, lon: coords.lon };
+    } else {
+        activeCoordsOverride = null;
+    }
+
+    if (selectEl && selectEl.value !== safeKey) {
+        selectEl.value = safeKey;
+    }
+
+    if (saveAsAuto) {
+        localStorage.setItem(LAST_AUTO_DISTRICT_KEY, safeKey);
+    }
+
+    updateQiblaDisplayForDistrict(safeKey);
+    renderRamadan2027Schedule(safeKey);
+    loadPrayerTimes();
+}
+
 function onDistrictChange() {
     const selectEl = document.getElementById('district-select');
     const district = selectEl ? selectEl.value : 'Dhaka';
-    updateQiblaDisplayForDistrict(district);
-    renderRamadan2027Schedule(district);
-    loadPrayerTimes();
+    applyDistrictSelection(district, null, false);
+}
+
+// GPS ও IP ফলব্যাকের মাধ্যমে বর্তমান জেলা স্বয়ংক্রিয়ভাবে নির্ণয়
+function detectLocationByIPFallback() {
+    fetch('https://ipwho.is/')
+        .then((res) => res.json())
+        .then((data) => {
+            if (data && data.success && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+                const nearest = findNearestDistrictKey(data.latitude, data.longitude);
+                applyDistrictSelection(nearest, { lat: data.latitude, lon: data.longitude }, true);
+            }
+        })
+        .catch(() => {});
+}
+
+function autoDetectCurrentDistrict() {
+    if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                const nearest = findNearestDistrictKey(lat, lon);
+                applyDistrictSelection(nearest, { lat, lon }, true);
+            },
+            () => {
+                detectLocationByIPFallback();
+            },
+            {
+                enableHighAccuracy: false,
+                timeout: 8000,
+                maximumAge: 300000
+            }
+        );
+    } else {
+        detectLocationByIPFallback();
+    }
 }
 
 // পূর্ণাঙ্গ সূরা অডিও (ইয়াসির আল-দাওসারি) — আয়াতের মাঝে ব্রেক ছাড়া একটানা প্লেব্যাক
@@ -528,7 +623,6 @@ async function loadSurahList() {
                 selectEl.appendChild(option);
             });
 
-            // শুরুতে "-- একটি সূরা নির্বাচন করুন --" অপশনটিই নির্বাচিত থাকবে
             selectEl.value = '';
             loadSurah();
         }
@@ -607,7 +701,6 @@ async function loadSurah() {
 
         let html = '';
 
-        // সূরা আত-তাওবাহ (৯) ছাড়া সূরা ফাতিহাসহ সব সূরার শুরুতে বিসমিল্লাহ আলাদা শুরু-বাক্য হিসেবে দেখানো
         if (surahNumber !== 9) {
             html += `
                 <div class="card" style="text-align: center;">
@@ -934,15 +1027,17 @@ function clearReflectionForm() {
 
 // পেজ লোড হলে সব ফিচার চালু করা
 document.addEventListener('DOMContentLoaded', () => {
+    const savedAutoDistrict = localStorage.getItem(LAST_AUTO_DISTRICT_KEY) || 'Dhaka';
     syncAlarmUI();
-    updateQiblaDisplayForDistrict('Dhaka');
-    renderRamadan2027Schedule('Dhaka');
-    loadPrayerTimes();
+    applyDistrictSelection(savedAutoDistrict, null, false);
     updateTasbihDisplay();
     renderDuaList();
     loadSurahList();
     renderReflectionHistory();
     checkEveningAutoPrompt();
+
+    // অ্যাপ ওপেন হলেই বর্তমান অবস্থান অনুযায়ী জেলা স্বয়ংক্রিয়ভাবে নির্ণয়
+    autoDetectCurrentDistrict();
 
     setInterval(checkPrayerAlarms, 20000);
     setInterval(checkEveningAutoPrompt, 60000);

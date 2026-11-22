@@ -1,4 +1,4 @@
-const CACHE_NAME = 'noor-islamic-app-v4';
+const CACHE_NAME = 'noor-islamic-app-v11';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -7,7 +7,6 @@ const ASSETS_TO_CACHE = [
   './manifest.json'
 ];
 
-// ইনস্টল হওয়ার সময় মূল ফাইলগুলো ক্যাশ করা
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -17,7 +16,6 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// পুরনো ক্যাশ পরিষ্কার করা
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -29,7 +27,6 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// নেটওয়ার্ক রিকোয়েস্ট হ্যান্ডেল করা ও ক্যাশ আপডেট রাখা
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
