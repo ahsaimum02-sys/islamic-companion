@@ -20,6 +20,11 @@ function openTab(tabId, event) {
             }
         });
     }
+
+    if (tabId === 'qibla') {
+        const selectEl = document.getElementById('district-select');
+        updateQiblaDisplayForDistrict(selectEl ? selectEl.value : 'Dhaka');
+    }
 }
 
 // ডার্ক/লাইট মোড টগল
@@ -46,9 +51,12 @@ const DISTRICT_COORDS = {
 const KAABA_LAT = 21.4225;
 const KAABA_LON = 39.8262;
 
+const ALARM_STORAGE_KEY = 'noor_prayer_alarm_enabled_v1';
+
 let currentQiblaBearing = 278;
+let smoothedHeading = null;
 let compassListenerActive = false;
-let prayerAlarmEnabled = false;
+let prayerAlarmEnabled = localStorage.getItem(ALARM_STORAGE_KEY) === 'true';
 let triggeredAlarmKeys = new Set();
 let alarmScheduleItems = [];
 
@@ -99,26 +107,54 @@ function updateQiblaDisplayForDistrict(districtKey) {
     }
 }
 
+function smoothAngle(prev, next, alpha = 0.25) {
+    if (prev === null) return next;
+    let diff = ((next - prev + 540) % 360) - 180;
+    return (prev + diff * alpha + 360) % 360;
+}
+
 function handleDeviceOrientation(event) {
-    let heading = null;
+    let rawHeading = null;
 
     if (typeof event.webkitCompassHeading === 'number' && !isNaN(event.webkitCompassHeading)) {
-        heading = event.webkitCompassHeading;
+        rawHeading = event.webkitCompassHeading;
     } else if (typeof event.alpha === 'number' && !isNaN(event.alpha)) {
-        heading = (360 - event.alpha) % 360;
+        rawHeading = (360 - event.alpha) % 360;
     }
 
-    if (heading === null) return;
+    if (rawHeading === null) return;
+
+    smoothedHeading = smoothAngle(smoothedHeading, rawHeading, 0.28);
+    const heading = smoothedHeading;
 
     const pointer = document.getElementById('qibla-pointer');
+    const ring = document.getElementById('compass-ring');
     const statusEl = document.getElementById('compass-status');
+
+    // তীর যেন সরাসরি ব্যবহারকারীর হাতের সামনের সাপেক্ষে কিবলার দিক দেখায়
     const relativeQiblaAngle = (currentQiblaBearing - heading + 360) % 360;
+    const signedDiff = ((relativeQiblaAngle + 180) % 360) - 180;
+    const isAligned = Math.abs(signedDiff) <= 6;
 
     if (pointer) {
         pointer.style.transform = `rotate(${relativeQiblaAngle}deg)`;
     }
+
+    if (ring) {
+        ring.style.borderColor = isAligned ? '#10b981' : 'rgba(251, 191, 36, 0.45)';
+        ring.style.boxShadow = isAligned
+            ? 'inset 0 0 26px rgba(16, 185, 129, 0.35), 0 0 24px rgba(16, 185, 129, 0.55)'
+            : 'inset 0 0 24px rgba(0, 0, 0, 0.6), 0 10px 28px rgba(0, 0, 0, 0.35)';
+    }
+
     if (statusEl) {
-        statusEl.textContent = `লাইভ কম্পাস সক্রিয় • বর্তমান হেডিং: ${Math.round(heading)}° • কিবলা: ${Math.round(currentQiblaBearing)}°`;
+        if (isAligned) {
+            statusEl.textContent = `✅ এখন সঠিক কিবলার দিকে মুখ করা আছে! (কিবলা: ${Math.round(currentQiblaBearing)}°)`;
+        } else if (signedDiff > 0) {
+            statusEl.textContent = `ফোনটি ডানদিকে প্রায় ${Math.round(Math.abs(signedDiff))}° ঘোরান • কিবলা: ${Math.round(currentQiblaBearing)}°`;
+        } else {
+            statusEl.textContent = `ফোনটি বামদিকে প্রায় ${Math.round(Math.abs(signedDiff))}° ঘোরান • কিবলা: ${Math.round(currentQiblaBearing)}°`;
+        }
     }
 }
 
@@ -148,7 +184,7 @@ async function requestCompassPermission() {
             if (response === 'granted') {
                 bindOrientationEvent();
                 if (statusEl) {
-                    statusEl.textContent = 'কম্পাস পারমিশন দেওয়া হয়েছে। ফোনটি সমতল রেখে ঘোরান।';
+                    statusEl.textContent = 'কম্পাস চালু হয়েছে। ফোনটি সমতল রেখে ঘোরান।';
                 }
             } else if (statusEl) {
                 statusEl.textContent = 'কম্পাস পারমিশন দেওয়া হয়নি। পুনরায় ক্লিক করে অনুমতি দিন।';
@@ -282,9 +318,8 @@ async function loadPrayerTimes() {
     }
 }
 
-// ওয়াক্ত শেষ হওয়ার ৩০ মিনিট আগে অ্যালার্ম ফাংশন
-function togglePrayerAlarm() {
-    prayerAlarmEnabled = !prayerAlarmEnabled;
+// ওয়াক্ত শেষ হওয়ার ৩০ মিনিট আগে অ্যালার্ম ফাংশন (স্থায়ীভাবে localStorage-এ সংরক্ষিত)
+function syncAlarmUI() {
     const btn = document.getElementById('alarm-toggle-btn');
     const statusText = document.getElementById('alarm-status-text');
 
@@ -294,10 +329,7 @@ function togglePrayerAlarm() {
             btn.classList.add('active');
         }
         if (statusText) {
-            statusText.textContent = 'সক্রিয়: প্রতি ওয়াক্ত শেষের ৩০ মিনিট আগে অ্যালার্ম বাজবে';
-        }
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission().catch(() => {});
+            statusText.textContent = 'সবসময় চালু আছে: প্রতি ওয়াক্ত শেষের ৩০ মিনিট আগে অ্যালার্ম বাজবে';
         }
     } else {
         if (btn) {
@@ -307,6 +339,16 @@ function togglePrayerAlarm() {
         if (statusText) {
             statusText.textContent = 'বর্তমানে বন্ধ আছে (চালু করতে বাটনে ক্লিক করুন)';
         }
+    }
+}
+
+function togglePrayerAlarm() {
+    prayerAlarmEnabled = !prayerAlarmEnabled;
+    localStorage.setItem(ALARM_STORAGE_KEY, String(prayerAlarmEnabled));
+    syncAlarmUI();
+
+    if (prayerAlarmEnabled && 'Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {});
     }
 }
 
@@ -383,20 +425,20 @@ function checkPrayerAlarms() {
     });
 }
 
-// রমজান ২০২৭ ক্যালেন্ডার রেন্ডার (সম্ভাব্য সময়সূচি)
+// রমজান ২০২৭ ক্যালেন্ডার রেন্ডার (৮ ফেব্রুয়ারি ২০২৭ থেকে ৩০ দিন)
 function renderRamadan2027Schedule(districtKey) {
     const tbody = document.getElementById('ramadan-table-body');
     const labelEl = document.getElementById('ramadan-district-label');
     const info = DISTRICT_COORDS[districtKey] || DISTRICT_COORDS.Dhaka;
 
     if (labelEl) {
-        labelEl.textContent = `নির্বাচিত জেলা: ${info.bn} • চাঁদ দেখার সাপেক্ষে ১–২ দিন পরিবর্তন হতে পারে`;
+        labelEl.textContent = `নির্বাচিত জেলা: ${info.bn} • শুরু ৮ ফেব্রুয়ারি ২০২৭ (চাঁদ দেখার সাপেক্ষে ১ দিন পরিবর্তন হতে পারে)`;
     }
     if (!tbody) return;
 
-    const baseStartDate = new Date(2027, 2, 10);
-    const baseSehriMins = 4 * 60 + 51;
-    const baseIftarMins = 18 * 60 + 6;
+    const baseStartDate = new Date(2027, 1, 8);
+    const baseSehriMins = 5 * 60 + 14;
+    const baseIftarMins = 17 * 60 + 50;
 
     const banglaDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
     const toBnNum = (num) => String(num).replace(/\d/g, (d) => banglaDigits[d]);
@@ -413,8 +455,8 @@ function renderRamadan2027Schedule(districtKey) {
         });
 
         const dailyShift = day - 1;
-        const sehriMins = baseSehriMins - Math.floor(dailyShift * 0.7) + info.offsetMin;
-        const iftarMins = baseIftarMins + Math.floor(dailyShift * 0.4) + info.offsetMin;
+        const sehriMins = baseSehriMins - Math.floor(dailyShift * 0.8) + info.offsetMin;
+        const iftarMins = baseIftarMins + Math.floor(dailyShift * 0.5) + info.offsetMin;
 
         rowsHtml += `
             <tr>
@@ -486,7 +528,8 @@ async function loadSurahList() {
                 selectEl.appendChild(option);
             });
 
-            selectEl.value = 1;
+            // শুরুতে "-- একটি সূরা নির্বাচন করুন --" অপশনটিই নির্বাচিত থাকবে
+            selectEl.value = '';
             loadSurah();
         }
     } catch (error) {
@@ -891,6 +934,7 @@ function clearReflectionForm() {
 
 // পেজ লোড হলে সব ফিচার চালু করা
 document.addEventListener('DOMContentLoaded', () => {
+    syncAlarmUI();
     updateQiblaDisplayForDistrict('Dhaka');
     renderRamadan2027Schedule('Dhaka');
     loadPrayerTimes();
