@@ -52,6 +52,11 @@ let prayerAlarmEnabled = false;
 let triggeredAlarmKeys = new Set();
 let alarmScheduleItems = [];
 
+// পূর্ণাঙ্গ সূরা অডিও (ইয়াসির আল-দাওসারি) ফলব্যাক স্টেট
+let activeAudioSources = [];
+let activeSourceIndex = 0;
+let surahAudioErrorBound = false;
+
 function toRadians(deg) {
     return (deg * Math.PI) / 180;
 }
@@ -432,6 +437,33 @@ function onDistrictChange() {
     loadPrayerTimes();
 }
 
+// পূর্ণাঙ্গ সূরা অডিও (ইয়াসির আল-দাওসারি) — আয়াতের মাঝে ব্রেক ছাড়া একটানা প্লেব্যাক
+function configureContinuousSurahAudio(audioPlayer, surahNumber) {
+    if (!audioPlayer) return;
+
+    const paddedNum = String(surahNumber).padStart(3, '0');
+    activeAudioSources = [
+        `https://download.quranicaudio.com/quran/yasser_ad-dussary/${paddedNum}.mp3`,
+        `https://server11.mp3quran.net/yasser/${paddedNum}.mp3`
+    ];
+    activeSourceIndex = 0;
+
+    audioPlayer.preload = 'metadata';
+    audioPlayer.src = activeAudioSources[0];
+    audioPlayer.load();
+
+    if (!surahAudioErrorBound) {
+        audioPlayer.addEventListener('error', () => {
+            if (activeSourceIndex + 1 < activeAudioSources.length) {
+                activeSourceIndex += 1;
+                audioPlayer.src = activeAudioSources[activeSourceIndex];
+                audioPlayer.load();
+            }
+        });
+        surahAudioErrorBound = true;
+    }
+}
+
 // আল-কুরআন সূরার তালিকা ও আয়াত লোড
 let surahListData = [];
 
@@ -500,6 +532,10 @@ async function loadSurah() {
     if (!surahNumber) {
         ayahContainer.innerHTML = '';
         if (audioContainer) audioContainer.style.display = 'none';
+        if (audioPlayer) {
+            audioPlayer.pause();
+            audioPlayer.removeAttribute('src');
+        }
         return;
     }
 
@@ -522,8 +558,7 @@ async function loadSurah() {
         const banglaAyahs = banglaData.data.ayahs;
 
         if (audioContainer && audioPlayer) {
-            const paddedNum = String(surahNumber).padStart(3, '0');
-            audioPlayer.src = `https://download.quranicaudio.com/quran/mishaari_rashid_al_afaasee/${paddedNum}.mp3`;
+            configureContinuousSurahAudio(audioPlayer, surahNumber);
             audioContainer.style.display = 'block';
         }
 
@@ -663,7 +698,6 @@ function checkEveningAutoPrompt() {
     const todayKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
     const dismissedKey = sessionStorage.getItem('noor_evening_dismissed_date');
 
-    // সন্ধ্যা ৬টা (১৮:০০) বা তার পরে দিনশেষের প্রশ্ন স্বয়ংক্রিয়ভাবে সামনে আনা
     if (hour >= 18 && dismissedKey !== todayKey) {
         banner.style.display = 'flex';
         if (promptEl) {
@@ -691,8 +725,6 @@ function jumpToReflectionTab() {
 
 function analyzeDailyEntry(text, flags) {
     const cleanText = (text || '').trim();
-    const lower = cleanText.toLowerCase();
-
     const goodPoints = [];
     const badPoints = [];
     const guidancePoints = [];
